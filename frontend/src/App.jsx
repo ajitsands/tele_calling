@@ -9,6 +9,7 @@ import AnalyticsView from './components/AnalyticsView';
 import CallSimulatorModal from './components/CallSimulatorModal';
 import ShiftAssignmentModal from './components/ShiftAssignmentModal';
 import UserSwitcherModal from './components/UserSwitcherModal';
+import RegisterDeviceModal from './components/RegisterDeviceModal';
 
 export default function App() {
   // Theme & Sound state
@@ -39,6 +40,7 @@ export default function App() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+  const [isRegisterDeviceOpen, setIsRegisterDeviceOpen] = useState(false);
 
   // Incoming Call Event State (Triggers CallingPopupModal)
   const [activeCallEvent, setActiveCallEvent] = useState(null);
@@ -276,6 +278,7 @@ export default function App() {
             currentUser={currentUser}
             onAssignDevice={(devId, force) => handleAssignDevice(devId, force)}
             onReleaseDevice={handleReleaseDevice}
+            onOpenRegisterModal={() => setIsRegisterDeviceOpen(true)}
           />
         )}
 
@@ -339,6 +342,27 @@ export default function App() {
           } else {
             setActiveShift(null);
           }
+        }}
+      />
+
+      {/* 7. Register New Phone Modal */}
+      <RegisterDeviceModal
+        isOpen={isRegisterDeviceOpen}
+        onClose={() => setIsRegisterDeviceOpen(false)}
+        onRegisterDevice={(newDev) => {
+          const registered = {
+            id: devices.length + 1,
+            device_uuid: 'dev-' + Math.random().toString(36).substr(2, 9),
+            device_name: newDev.device_name,
+            sim_number: newDev.sim_number,
+            android_version: newDev.android_version,
+            battery_level: 95,
+            status: 'ONLINE',
+            active_user_id: null,
+            active_user_name: null,
+            shift_name: null
+          };
+          setDevices(prev => [...prev, registered]);
         }}
       />
 

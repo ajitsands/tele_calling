@@ -17,7 +17,8 @@ export default function DeviceShiftManager({
   users, 
   currentUser, 
   onAssignDevice, 
-  onReleaseDevice 
+  onReleaseDevice,
+  onOpenRegisterModal 
 }) {
   return (
     <div className="space-y-6">
@@ -31,10 +32,17 @@ export default function DeviceShiftManager({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-1.5">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenRegisterModal}
+            className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Register New Phone</span>
+          </button>
+          <span className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-1.5">
             <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-            <span>5 Terminals Active on Wi-Fi</span>
+            <span>{devices.length} Terminals Mapped</span>
           </span>
         </div>
       </div>
