@@ -66,3 +66,4 @@ Different Android phone brands have native recording options in their default Ph
 | **3. Make a Call** | Place or receive a call on the phone | Phone screen shows recording active; Laptop shows incoming call popup |
 | **4. Hang Up** | Conclude the call | Within 5 seconds, audio is uploaded to `E:\TeleCalling\backend\storage\recordings\` and deleted from phone |
 | **5. Play Audio** | Open `http://192.168.8.11:3000` -> **Call Logs & Audio** | Click **Play ▶** button to listen to the recording |
+

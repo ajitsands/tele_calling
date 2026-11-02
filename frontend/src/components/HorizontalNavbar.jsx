@@ -215,10 +215,10 @@ export default function HorizontalNavbar({
       </div>
 
       {/* ========================================================
-          TIER 2: Horizontal Menu Bar (Bottom of Header, Full Width, Fixed/Not Scrolling)
+          TIER 2: Horizontal Menu Bar (Bottom of Header, Elegant Light Gradient Effect)
          ======================================================== */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 bg-slate-50/70 dark:bg-slate-900/70">
-        <nav className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto py-1.5 scrollbar-none">
+      <div className="w-full px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-slate-100/95 via-brand-50/50 to-indigo-50/40 dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900 border-t border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <nav className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto py-2 scrollbar-none">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -226,10 +226,10 @@ export default function HorizontalNavbar({
               <button
                 key={item.id}
                 onClick={() => setCurrentTab(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all shrink-0 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
                   isActive 
-                    ? 'bg-brand-600 text-white shadow-xs' 
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700'
+                    ? 'bg-brand-600 text-white shadow-sm ring-1 ring-brand-700/20' 
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-white/90 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent hover:border-slate-200/80 dark:hover:border-slate-700 hover:shadow-2xs'
                 }`}
               >
                 <Icon className="w-4 h-4" />

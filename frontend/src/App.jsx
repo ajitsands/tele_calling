@@ -10,6 +10,8 @@ import CallSimulatorModal from './components/CallSimulatorModal';
 import ShiftAssignmentModal from './components/ShiftAssignmentModal';
 import UserSwitcherModal from './components/UserSwitcherModal';
 import RegisterDeviceModal from './components/RegisterDeviceModal';
+import Footer from './components/Footer';
+import HelpGuideModal from './components/HelpGuideModal';
 
 export default function App() {
   // Theme & Sound state
@@ -47,6 +49,7 @@ export default function App() {
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
   const [isRegisterDeviceOpen, setIsRegisterDeviceOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // Incoming Call Event State (Triggers CallingPopupModal)
   const [activeCallEvent, setActiveCallEvent] = useState(null);
@@ -473,6 +476,15 @@ export default function App() {
             status: 'ACTIVE'
           });
         }}
+      />
+
+      {/* 8. Full-Width Footer */}
+      <Footer onOpenHelpModal={() => setIsHelpModalOpen(true)} />
+
+      {/* 9. Help & Procedures Guide Modal */}
+      <HelpGuideModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
       />
 
     </div>
