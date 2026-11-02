@@ -13,12 +13,11 @@ class EventStreamController extends Controller {
             $content = file_get_contents($eventFile);
             $eventData = json_decode($content, true);
 
-            if ($eventData && !empty($eventData['timestamp'])) {
-                $eventTime = strtotime($eventData['timestamp']);
-                $isRecent = (time() - $eventTime) < 20; // Only consider events from last 20 seconds
-                $isCleared = in_array($eventData['event'] ?? '', ['CLEARED', 'NONE', 'ENDED', 'MISSED', 'REJECTED']);
+            if ($eventData && ($eventData['event'] ?? '') === 'RINGING') {
+                $epoch = $eventData['epoch_time'] ?? (!empty($eventData['timestamp']) ? strtotime($eventData['timestamp']) : 0);
+                $isRecent = (time() - $epoch) < 60; // Ringing calls remain active up to 60 seconds unless cleared
 
-                if ($isRecent && !$isCleared) {
+                if ($isRecent) {
                     $this->success('Latest event', ['event' => $eventData]);
                     return;
                 }

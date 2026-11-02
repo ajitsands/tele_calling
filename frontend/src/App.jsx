@@ -173,7 +173,6 @@ export default function App() {
   };
 
   // Real-time Event Listener: Polls server /api/realtime/latest every 1.5 seconds
-  const appMountTimeRef = useRef(Date.now());
   const lastProcessedEventIdRef = useRef(null);
 
   useEffect(() => {
@@ -194,22 +193,11 @@ export default function App() {
         const json = await res.json();
         const ev = json?.data?.event;
 
-        // Strict conditions to trigger a popup:
-        // 1. Must exist and have a valid id
-        // 2. Must NOT be the event that was already present at page load
-        // 3. Must be RINGING (not CLEARED, ENDED, MISSED, REJECTED)
-        // 4. Must have occurred after this page was opened (or within last 15s)
-        if (ev && ev.id && ev.id !== lastProcessedEventIdRef.current) {
+        // Trigger whenever a new RINGING event arrives that hasn't been processed yet
+        if (ev && ev.id && ev.id !== lastProcessedEventIdRef.current && ev.event === 'RINGING') {
           lastProcessedEventIdRef.current = ev.id;
-
-          const eventTime = ev.timestamp ? new Date(ev.timestamp.replace(' ', 'T')).getTime() : Date.now();
-          const isFresh = (Date.now() - eventTime) < 15000;
-          const isAfterMount = eventTime >= (appMountTimeRef.current - 2000);
-
-          if (ev.event === 'RINGING' && isFresh && isAfterMount) {
-            playRingChime();
-            setActiveCallEvent(ev);
-          }
+          playRingChime();
+          setActiveCallEvent(ev);
         }
       } catch (err) {
         // network quiet catch
@@ -259,6 +247,7 @@ export default function App() {
 
   // Handle Save Disposition (Agent completed call and submitted outcome)
   const handleSaveDisposition = async (data) => {
+    setActiveCallEvent(null);
     const duration = data.call_duration || 120;
     const newLog = {
       id: data.call_id || Date.now(),
@@ -277,48 +266,40 @@ export default function App() {
       recording_duration: duration
     };
 
+    setCalls(prev => [newLog, ...prev]);
+    setStats(prev => ({ ...prev, total_calls_today: prev.total_calls_today + 1, answered_today: prev.answered_today + 1 }));
+
     try {
       if (data.call_id) {
-        await fetch(`/api/calls/${data.call_id}/disposition`, {
+        fetch(`/api/calls/${data.call_id}/disposition`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
-        });
+        }).catch(() => {});
       }
-      await fetch('/api/realtime/clear', { method: 'POST' });
+      fetch('/api/realtime/clear', { method: 'POST' }).catch(() => {});
     } catch (e) {}
-
-    setCalls(prev => [newLog, ...prev]);
-    setStats(prev => ({ ...prev, total_calls_today: prev.total_calls_today + 1, answered_today: prev.answered_today + 1 }));
-    setActiveCallEvent(null);
   };
 
   // Handle Answering Call
   const handleAnswerCall = async (callId) => {
+    setActiveCallEvent(prev => prev ? ({ ...prev, event: 'ANSWERED' }) : null);
     try {
       if (callId) {
-        await fetch(`/api/calls/${callId}/answer`, { method: 'POST' });
+        fetch(`/api/calls/${callId}/answer`, { method: 'POST' }).catch(() => {});
       }
     } catch (e) {}
-    setActiveCallEvent(prev => prev ? ({ ...prev, event: 'ANSWERED' }) : null);
   };
 
-  // Handle Reject Call (Agent explicitly clicked Decline)
-  const handleRejectCall = async (callId) => {
+  // Handle Reject Call (Agent clicked Decline - closes modal immediately and logs REJECTED)
+  const handleRejectCall = (callId) => {
     const callerNum = activeCallEvent?.caller_number || 'Unknown Caller';
     const custName = activeCallEvent?.customer?.full_name || 'Caller';
 
-    try {
-      if (callId) {
-        await fetch(`/api/calls/${callId}/reject`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ agent_name: currentUser?.name || 'Agent' })
-        });
-      }
-      await fetch('/api/realtime/clear', { method: 'POST' });
-    } catch (e) {}
+    // 1. Close modal immediately
+    setActiveCallEvent(null);
 
+    // 2. Add to local calls table
     const rejectedLog = {
       id: callId || Date.now(),
       customer_number: callerNum,
@@ -342,25 +323,27 @@ export default function App() {
       total_calls_today: prev.total_calls_today + 1,
       missed_today: prev.missed_today + 1
     }));
-    setActiveCallEvent(null);
+
+    // 3. Inform server in background
+    if (callId) {
+      fetch(`/api/calls/${callId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_name: currentUser?.name || 'Agent' })
+      }).catch(() => {});
+    }
+    fetch('/api/realtime/clear', { method: 'POST' }).catch(() => {});
   };
 
   // Handle Dismiss Call (Agent closed popup window without answering/rejecting)
-  const handleDismissCall = async (callId) => {
+  const handleDismissCall = (callId) => {
     const callerNum = activeCallEvent?.caller_number || 'Unknown Caller';
     const custName = activeCallEvent?.customer?.full_name || 'Caller';
 
-    try {
-      if (callId) {
-        await fetch(`/api/calls/${callId}/dismiss`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ agent_name: currentUser?.name || 'Agent' })
-        });
-      }
-      await fetch('/api/realtime/clear', { method: 'POST' });
-    } catch (e) {}
+    // 1. Close modal immediately
+    setActiveCallEvent(null);
 
+    // 2. Add to local calls table
     const missedLog = {
       id: callId || Date.now(),
       customer_number: callerNum,
@@ -384,7 +367,16 @@ export default function App() {
       total_calls_today: prev.total_calls_today + 1,
       missed_today: prev.missed_today + 1
     }));
-    setActiveCallEvent(null);
+
+    // 3. Inform server in background
+    if (callId) {
+      fetch(`/api/calls/${callId}/dismiss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_name: currentUser?.name || 'Agent' })
+      }).catch(() => {});
+    }
+    fetch('/api/realtime/clear', { method: 'POST' }).catch(() => {});
   };
 
   // Assign Device & Shift

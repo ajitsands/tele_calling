@@ -197,6 +197,7 @@ class CallController extends Controller {
             'customer' => $customer,
             'history' => $history,
             'notes' => $notes,
+            'epoch_time' => time(),
             'timestamp' => date('Y-m-d H:i:s')
         ];
 

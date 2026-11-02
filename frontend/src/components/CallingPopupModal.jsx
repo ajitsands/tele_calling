@@ -126,10 +126,9 @@ export default function CallingPopupModal({
             )}
             <button 
               onClick={() => {
+                onClose();
                 if (callState === 'RINGING' && onDismissCall) {
                   onDismissCall(callEvent.call_log_id);
-                } else {
-                  onClose();
                 }
               }}
               className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition"
@@ -210,11 +209,9 @@ export default function CallingPopupModal({
                   </button>
                   <button
                     onClick={() => {
+                      onClose();
                       if (onRejectCall) {
                         onRejectCall(callEvent.call_log_id);
-                      } else {
-                        setCallState('ENDED');
-                        if (onSimulateEnd) onSimulateEnd();
                       }
                     }}
                     className="py-2.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition"
