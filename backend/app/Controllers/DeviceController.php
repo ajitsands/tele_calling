@@ -133,7 +133,7 @@ class DeviceController extends Controller {
         $db = Database::getConnection();
         $stmt = $db->prepare("
             UPDATE devices 
-            SET last_heartbeat = NOW(), status = 'ONLINE', battery_level = COALESCE(?, battery_level), ip_address = COALESCE(?, ip_address)
+            SET last_heartbeat = CURRENT_TIMESTAMP, status = 'ONLINE', battery_level = COALESCE(?, battery_level), ip_address = COALESCE(?, ip_address)
             WHERE device_uuid = ?
         ");
         $stmt->execute([$battery, $ip, $deviceUuid]);
@@ -154,20 +154,33 @@ class DeviceController extends Controller {
         }
 
         $db = Database::getConnection();
-        $stmt = $db->prepare("
-            INSERT INTO devices (device_uuid, device_name, sim_number, android_version, ip_address, last_heartbeat, status)
-            VALUES (?, ?, ?, ?, ?, NOW(), 'ONLINE')
-            ON DUPLICATE KEY UPDATE 
-                device_name = VALUES(device_name),
-                sim_number = VALUES(sim_number),
-                android_version = VALUES(android_version),
-                ip_address = VALUES(ip_address),
-                last_heartbeat = NOW(),
-                status = 'ONLINE'
-        ");
-        $stmt->execute([$uuid, $name, $simNumber, $androidVer, $ip]);
+        $check = $db->prepare("SELECT id FROM devices WHERE device_uuid = ?");
+        $check->execute([$uuid]);
+        $existing = $check->fetch();
 
-        $this->success('Device registered/updated successfully');
+        if ($existing) {
+            $stmt = $db->prepare("
+                UPDATE devices 
+                SET device_name = ?, sim_number = ?, android_version = ?, ip_address = COALESCE(?, ip_address), last_heartbeat = CURRENT_TIMESTAMP, status = 'ONLINE'
+                WHERE device_uuid = ?
+            ");
+            $stmt->execute([$name, $simNumber, $androidVer, $ip, $uuid]);
+            $deviceId = $existing['id'];
+        } else {
+            $stmt = $db->prepare("
+                INSERT INTO devices (device_uuid, device_name, sim_number, android_version, ip_address, last_heartbeat, status)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'ONLINE')
+            ");
+            $stmt->execute([$uuid, $name, $simNumber, $androidVer, $ip]);
+            $deviceId = $db->lastInsertId();
+        }
+
+        $this->success('Device registered/updated successfully', [
+            'id' => $deviceId,
+            'device_uuid' => $uuid,
+            'device_name' => $name,
+            'sim_number' => $simNumber
+        ]);
     }
 }
 

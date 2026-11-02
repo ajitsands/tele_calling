@@ -46,13 +46,36 @@ export default function App() {
   const [activeCallEvent, setActiveCallEvent] = useState(null);
 
   // Data collections
-  const [devices, setDevices] = useState([
-    { id: 1, device_uuid: 'dev-samsung-s21-01', device_name: 'Samsung Galaxy S21 (Terminal-1)', sim_number: '+91 98100 11001', android_version: 'Android 14', battery_level: 92, status: 'ONLINE', active_user_id: 2, active_user_name: 'Priya Sharma', shift_name: 'Morning Shift' },
-    { id: 2, device_uuid: 'dev-redmi-note12-02', device_name: 'Redmi Note 12 5G (Terminal-2)', sim_number: '+91 98100 22002', android_version: 'Android 13', battery_level: 78, status: 'ONLINE', active_user_id: 3, active_user_name: 'Rahul Verma', shift_name: 'Morning Shift' },
-    { id: 3, device_uuid: 'dev-oneplus-nord-03', device_name: 'OnePlus Nord CE 3 (Terminal-3)', sim_number: '+91 98100 33003', android_version: 'Android 14', battery_level: 85, status: 'ONLINE', active_user_id: 4, active_user_name: 'Ananya Patel', shift_name: 'Morning Shift' },
-    { id: 4, device_uuid: 'dev-vivo-v29-04', device_name: 'Vivo V29 Pro (Terminal-4)', sim_number: '+91 98100 44004', android_version: 'Android 13', battery_level: 64, status: 'ONLINE', active_user_id: 5, active_user_name: 'Vikram Singh', shift_name: 'Morning Shift' },
-    { id: 5, device_uuid: 'dev-realme-11-05', device_name: 'Realme 11 Pro+ (Terminal-5)', sim_number: '+91 98100 55005', android_version: 'Android 12', battery_level: 90, status: 'ONLINE', active_user_id: 6, active_user_name: 'Sneha Roy', shift_name: 'Morning Shift' }
-  ]);
+  const [devices, setDevices] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tele_devices');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      { id: 1, device_uuid: 'dev-samsung-s21-01', device_name: 'Samsung Galaxy S21 (Terminal-1)', sim_number: '+91 98100 11001', android_version: 'Android 14', battery_level: 92, status: 'ONLINE', active_user_id: 2, active_user_name: 'Priya Sharma', shift_name: 'Morning Shift' },
+      { id: 2, device_uuid: 'dev-redmi-note12-02', device_name: 'Redmi Note 12 5G (Terminal-2)', sim_number: '+91 98100 22002', android_version: 'Android 13', battery_level: 78, status: 'ONLINE', active_user_id: 3, active_user_name: 'Rahul Verma', shift_name: 'Morning Shift' },
+      { id: 3, device_uuid: 'dev-oneplus-nord-03', device_name: 'OnePlus Nord CE 3 (Terminal-3)', sim_number: '+91 98100 33003', android_version: 'Android 14', battery_level: 85, status: 'ONLINE', active_user_id: 4, active_user_name: 'Ananya Patel', shift_name: 'Morning Shift' },
+      { id: 4, device_uuid: 'dev-vivo-v29-04', device_name: 'Vivo V29 Pro (Terminal-4)', sim_number: '+91 98100 44004', android_version: 'Android 13', battery_level: 64, status: 'ONLINE', active_user_id: 5, active_user_name: 'Vikram Singh', shift_name: 'Morning Shift' },
+      { id: 5, device_uuid: 'dev-realme-11-05', device_name: 'Realme 11 Pro+ (Terminal-5)', sim_number: '+91 98100 55005', android_version: 'Android 12', battery_level: 90, status: 'ONLINE', active_user_id: 6, active_user_name: 'Sneha Roy', shift_name: 'Morning Shift' }
+    ];
+  });
+
+  // Sync devices to localStorage so it never disappears on refresh
+  useEffect(() => {
+    localStorage.setItem('tele_devices', JSON.stringify(devices));
+  }, [devices]);
+
+  // Fetch registered devices from backend on load
+  useEffect(() => {
+    fetch('/api/devices')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.data?.devices && data.data.devices.length > 0) {
+          setDevices(data.data.devices);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [users, setUsers] = useState([
     { id: 1, name: 'System Administrator', email: 'admin@telecalling.lan', role: 'ADMIN' },
@@ -374,7 +397,7 @@ export default function App() {
       <RegisterDeviceModal
         isOpen={isRegisterDeviceOpen}
         onClose={() => setIsRegisterDeviceOpen(false)}
-        onRegisterDevice={(newDev) => {
+        onRegisterDevice={async (newDev) => {
           const registered = {
             id: devices.length + 1,
             device_uuid: 'dev-' + Math.random().toString(36).substr(2, 9),
@@ -383,11 +406,32 @@ export default function App() {
             android_version: newDev.android_version,
             battery_level: 95,
             status: 'ONLINE',
-            active_user_id: null,
-            active_user_name: null,
-            shift_name: null
+            active_user_id: currentUser?.id,
+            active_user_name: currentUser?.name,
+            shift_name: 'Morning Shift'
           };
+
+          // 1. Update state
           setDevices(prev => [...prev, registered]);
+
+          // 2. Persist to server backend
+          try {
+            await fetch('/api/devices/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(registered)
+            });
+          } catch (e) {}
+
+          // 3. Immediately map to active shift
+          setActiveShift({
+            id: Date.now(),
+            device_id: registered.id,
+            device_name: registered.device_name,
+            sim_number: registered.sim_number,
+            shift_name: 'Morning Shift',
+            status: 'ACTIVE'
+          });
         }}
       />
 
