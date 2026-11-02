@@ -24,3 +24,4 @@ if %ERRORLEVEL% NEQ 0 (
 echo.
 echo [SUCCESS] tele_calling_db initialized and seeded successfully!
 pause
+

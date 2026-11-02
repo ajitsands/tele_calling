@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+storage/recordings/*.mp3
+storage/recordings/*.wav
+storage/recordings/*.m4a
+!storage/recordings/sample_call_1.mp3
+backend/storage/active_event.json
+*.log

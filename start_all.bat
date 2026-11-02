@@ -17,3 +17,4 @@ echo ========================================================
 echo Web Application URL: http://localhost:3000
 echo Backend API URL:    http://localhost:8000/api
 echo ========================================================
+
