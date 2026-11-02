@@ -22,7 +22,10 @@ export default function CallingPopupModal({
   onClose, 
   onSaveDisposition, 
   onSimulateAnswer, 
-  onSimulateEnd 
+  onSimulateEnd,
+  onRejectCall,
+  onDismissCall,
+  onAnswerCall
 }) {
   if (!callEvent) return null;
 
@@ -63,6 +66,7 @@ export default function CallingPopupModal({
     setIsSubmitting(true);
     await onSaveDisposition({
       call_id: callEvent.call_log_id,
+      call_duration: callDuration,
       disposition,
       disposition_notes: notes,
       lead_status: leadStatus,
@@ -121,8 +125,15 @@ export default function CallingPopupModal({
               </div>
             )}
             <button 
-              onClick={onClose}
+              onClick={() => {
+                if (callState === 'RINGING' && onDismissCall) {
+                  onDismissCall(callEvent.call_log_id);
+                } else {
+                  onClose();
+                }
+              }}
               className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition"
+              title="Close / Dismiss Call Window"
             >
               <X className="w-5 h-5" />
             </button>
@@ -189,6 +200,7 @@ export default function CallingPopupModal({
                   <button
                     onClick={() => {
                       setCallState('ANSWERED');
+                      if (onAnswerCall) onAnswerCall(callEvent.call_log_id);
                       if (onSimulateAnswer) onSimulateAnswer();
                     }}
                     className="flex-1 py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition"
@@ -198,10 +210,15 @@ export default function CallingPopupModal({
                   </button>
                   <button
                     onClick={() => {
-                      setCallState('ENDED');
-                      if (onSimulateEnd) onSimulateEnd();
+                      if (onRejectCall) {
+                        onRejectCall(callEvent.call_log_id);
+                      } else {
+                        setCallState('ENDED');
+                        if (onSimulateEnd) onSimulateEnd();
+                      }
                     }}
                     className="py-2.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition"
+                    title="Reject / Decline Call"
                   >
                     <PhoneOff className="w-4 h-4" />
                     <span>Decline</span>

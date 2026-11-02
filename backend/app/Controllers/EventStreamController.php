@@ -12,14 +12,31 @@ class EventStreamController extends Controller {
         if (file_exists($eventFile)) {
             $content = file_get_contents($eventFile);
             $eventData = json_decode($content, true);
-            $this->success('Latest event', ['event' => $eventData]);
-        } else {
-            $this->success('No active event', ['event' => null]);
+
+            if ($eventData && !empty($eventData['timestamp'])) {
+                $eventTime = strtotime($eventData['timestamp']);
+                $isRecent = (time() - $eventTime) < 20; // Only consider events from last 20 seconds
+                $isCleared = in_array($eventData['event'] ?? '', ['CLEARED', 'NONE', 'ENDED', 'MISSED', 'REJECTED']);
+
+                if ($isRecent && !$isCleared) {
+                    $this->success('Latest event', ['event' => $eventData]);
+                    return;
+                }
+            }
         }
+        $this->success('No active event', ['event' => null]);
+    }
+
+    public function clear(): void {
+        $eventFile = __DIR__ . '/../../storage/active_event.json';
+        file_put_contents($eventFile, json_encode([
+            'event' => 'CLEARED',
+            'timestamp' => date('Y-m-d H:i:s')
+        ]));
+        $this->success('Active event cleared');
     }
 
     public function stream(): void {
-        // Disable output buffering
         while (ob_get_level()) {
             ob_end_clean();
         }
@@ -28,7 +45,7 @@ class EventStreamController extends Controller {
         header('Cache-Control: no-cache');
         header('Connection: keep-alive');
         header('Access-Control-Allow-Origin: *');
-        header('X-Accel-Buffering: no'); // For Nginx if used
+        header('X-Accel-Buffering: no');
 
         $user = $this->getAuthUser();
         $targetUserId = $user ? (int)$user['id'] : 0;
@@ -36,13 +53,12 @@ class EventStreamController extends Controller {
         $eventFile = __DIR__ . '/../../storage/active_event.json';
         $lastMtime = 0;
 
-        // Send initial heartbeat
         echo "event: ping\n";
         echo "data: " . json_encode(['time' => time(), 'status' => 'connected']) . "\n\n";
         flush();
 
         $startTime = time();
-        $timeout = 25; // 25 seconds per connection, browser auto-reconnects cleanly
+        $timeout = 25;
 
         while (time() - $startTime < $timeout) {
             if (file_exists($eventFile)) {
@@ -52,8 +68,7 @@ class EventStreamController extends Controller {
                     $content = file_get_contents($eventFile);
                     $eventData = json_decode($content, true);
 
-                    if ($eventData) {
-                        // Check if event belongs to this user or if user is admin
+                    if ($eventData && ($eventData['event'] ?? '') === 'RINGING') {
                         $eventUser = (int)($eventData['user_id'] ?? 0);
                         $isAuthorized = ($targetUserId === 0 || $eventUser === $targetUserId || ($user && $user['role'] === 'ADMIN'));
 
@@ -66,7 +81,7 @@ class EventStreamController extends Controller {
                 }
             }
 
-            usleep(250000); // Check every 250ms for low latency
+            usleep(250000);
         }
 
         echo "event: ping\n";
@@ -75,4 +90,3 @@ class EventStreamController extends Controller {
         exit;
     }
 }
-

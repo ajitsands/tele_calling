@@ -299,7 +299,76 @@ class CallController extends Controller {
             }
         }
 
+        // Clear active event so it never loops on refresh
+        $eventFile = __DIR__ . '/../../storage/active_event.json';
+        file_put_contents($eventFile, json_encode(['event' => 'CLEARED', 'timestamp' => date('Y-m-d H:i:s')]));
+
         $this->success('Call disposition and notes saved successfully');
+    }
+
+    public function rejectCall(array $params): void {
+        $callId = (int)($params['id'] ?? 0);
+        $user = $this->getAuthUser();
+        $userName = $user ? $user['name'] : 'Agent';
+
+        $db = Database::getConnection();
+        if ($callId > 0) {
+            $stmt = $db->prepare("
+                UPDATE call_logs 
+                SET call_status = 'REJECTED', 
+                    disposition = 'NOT_INTERESTED', 
+                    disposition_notes = 'Call rejected/declined on screen by " . addslashes($userName) . "',
+                    end_time = CURRENT_TIMESTAMP,
+                    duration_seconds = 0
+                WHERE id = ?
+            ");
+            $stmt->execute([$callId]);
+        }
+
+        // Clear active event so it never re-triggers on refresh
+        $eventFile = __DIR__ . '/../../storage/active_event.json';
+        file_put_contents($eventFile, json_encode(['event' => 'CLEARED', 'timestamp' => date('Y-m-d H:i:s')]));
+
+        $this->success('Call marked as REJECTED');
+    }
+
+    public function dismissCall(array $params): void {
+        $callId = (int)($params['id'] ?? 0);
+        $user = $this->getAuthUser();
+        $userName = $user ? $user['name'] : 'Agent';
+
+        $db = Database::getConnection();
+        if ($callId > 0) {
+            $stmt = $db->prepare("
+                UPDATE call_logs 
+                SET call_status = 'MISSED', 
+                    disposition_notes = 'Popup closed/dismissed without action by " . addslashes($userName) . "',
+                    end_time = CURRENT_TIMESTAMP
+                WHERE id = ? AND call_status = 'RINGING'
+            ");
+            $stmt->execute([$callId]);
+        }
+
+        // Clear active event so it never re-triggers on refresh
+        $eventFile = __DIR__ . '/../../storage/active_event.json';
+        file_put_contents($eventFile, json_encode(['event' => 'CLEARED', 'timestamp' => date('Y-m-d H:i:s')]));
+
+        $this->success('Call popup dismissed and recorded as MISSED');
+    }
+
+    public function answerCall(array $params): void {
+        $callId = (int)($params['id'] ?? 0);
+        $db = Database::getConnection();
+        if ($callId > 0) {
+            $stmt = $db->prepare("
+                UPDATE call_logs 
+                SET call_status = 'IN_PROGRESS', 
+                    answer_time = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ");
+            $stmt->execute([$callId]);
+        }
+        $this->success('Call marked as IN_PROGRESS');
     }
 
     public function index(): void {

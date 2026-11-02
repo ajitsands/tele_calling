@@ -50,6 +50,9 @@ $router->post('/api/devices/register', [DeviceController::class, 'register']);
 $router->post('/api/calls/event', [CallController::class, 'ingestEvent']);
 $router->get('/api/calls/active', [CallController::class, 'getActiveCall']);
 $router->post('/api/calls/{id}/disposition', [CallController::class, 'saveDisposition']);
+$router->post('/api/calls/{id}/reject', [CallController::class, 'rejectCall']);
+$router->post('/api/calls/{id}/dismiss', [CallController::class, 'dismissCall']);
+$router->post('/api/calls/{id}/answer', [CallController::class, 'answerCall']);
 $router->get('/api/calls', [CallController::class, 'index']);
 $router->get('/api/calls/stats', [CallController::class, 'stats']);
 
@@ -64,6 +67,7 @@ $router->get('/api/recordings/{id}/stream', [RecordingController::class, 'stream
 
 // Realtime SSE & Polling Event Stream
 $router->get('/api/realtime/latest', [EventStreamController::class, 'latest']);
+$router->post('/api/realtime/clear', [EventStreamController::class, 'clear']);
 $router->get('/api/realtime/stream', [EventStreamController::class, 'stream']);
 
 // Dispatch Request

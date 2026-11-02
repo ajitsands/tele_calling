@@ -173,21 +173,43 @@ export default function App() {
   };
 
   // Real-time Event Listener: Polls server /api/realtime/latest every 1.5 seconds
+  const appMountTimeRef = useRef(Date.now());
   const lastProcessedEventIdRef = useRef(null);
 
   useEffect(() => {
+    // Prime the last event ID so whatever existed BEFORE page refresh is ignored
+    fetch('/api/realtime/latest')
+      .then(res => res.json())
+      .then(json => {
+        if (json?.data?.event?.id) {
+          lastProcessedEventIdRef.current = json.data.event.id;
+        }
+      })
+      .catch(() => {});
+
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch('/api/realtime/latest');
         if (!res.ok) return;
         const json = await res.json();
         const ev = json?.data?.event;
+
+        // Strict conditions to trigger a popup:
+        // 1. Must exist and have a valid id
+        // 2. Must NOT be the event that was already present at page load
+        // 3. Must be RINGING (not CLEARED, ENDED, MISSED, REJECTED)
+        // 4. Must have occurred after this page was opened (or within last 15s)
         if (ev && ev.id && ev.id !== lastProcessedEventIdRef.current) {
           lastProcessedEventIdRef.current = ev.id;
-          if (ev.event === 'RINGING') {
+
+          const eventTime = ev.timestamp ? new Date(ev.timestamp.replace(' ', 'T')).getTime() : Date.now();
+          const isFresh = (Date.now() - eventTime) < 15000;
+          const isAfterMount = eventTime >= (appMountTimeRef.current - 2000);
+
+          if (ev.event === 'RINGING' && isFresh && isAfterMount) {
             playRingChime();
+            setActiveCallEvent(ev);
           }
-          setActiveCallEvent(ev);
         }
       } catch (err) {
         // network quiet catch
@@ -235,9 +257,9 @@ export default function App() {
     setActiveCallEvent(fullEvent);
   };
 
-  // Handle Save Disposition
-  const handleSaveDisposition = (data) => {
-    // Add to call logs
+  // Handle Save Disposition (Agent completed call and submitted outcome)
+  const handleSaveDisposition = async (data) => {
+    const duration = data.call_duration || 120;
     const newLog = {
       id: data.call_id || Date.now(),
       customer_number: activeCallEvent?.caller_number,
@@ -245,18 +267,123 @@ export default function App() {
       company_name: activeCallEvent?.customer?.company_name,
       call_type: 'INCOMING',
       call_status: 'COMPLETED',
-      agent_name: currentUser.name,
-      device_name: activeShift?.device_name || 'Terminal Phone',
+      agent_name: currentUser?.name || 'Agent',
+      device_name: activeCallEvent?.device_name || activeShift?.device_name || 'Terminal Phone',
       start_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      duration_seconds: 145,
+      duration_seconds: duration,
       disposition: data.disposition,
       disposition_notes: data.disposition_notes,
       recording_file_path: 'storage/recordings/sample_call_1.mp3',
-      recording_duration: 145
+      recording_duration: duration
     };
+
+    try {
+      if (data.call_id) {
+        await fetch(`/api/calls/${data.call_id}/disposition`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      }
+      await fetch('/api/realtime/clear', { method: 'POST' });
+    } catch (e) {}
 
     setCalls(prev => [newLog, ...prev]);
     setStats(prev => ({ ...prev, total_calls_today: prev.total_calls_today + 1, answered_today: prev.answered_today + 1 }));
+    setActiveCallEvent(null);
+  };
+
+  // Handle Answering Call
+  const handleAnswerCall = async (callId) => {
+    try {
+      if (callId) {
+        await fetch(`/api/calls/${callId}/answer`, { method: 'POST' });
+      }
+    } catch (e) {}
+    setActiveCallEvent(prev => prev ? ({ ...prev, event: 'ANSWERED' }) : null);
+  };
+
+  // Handle Reject Call (Agent explicitly clicked Decline)
+  const handleRejectCall = async (callId) => {
+    const callerNum = activeCallEvent?.caller_number || 'Unknown Caller';
+    const custName = activeCallEvent?.customer?.full_name || 'Caller';
+
+    try {
+      if (callId) {
+        await fetch(`/api/calls/${callId}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent_name: currentUser?.name || 'Agent' })
+        });
+      }
+      await fetch('/api/realtime/clear', { method: 'POST' });
+    } catch (e) {}
+
+    const rejectedLog = {
+      id: callId || Date.now(),
+      customer_number: callerNum,
+      customer_name: custName,
+      company_name: activeCallEvent?.customer?.company_name || '—',
+      call_type: 'INCOMING',
+      call_status: 'REJECTED',
+      agent_name: currentUser?.name || 'Agent',
+      device_name: activeCallEvent?.device_name || activeShift?.device_name || 'Terminal Phone',
+      start_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      duration_seconds: 0,
+      disposition: 'NOT_INTERESTED',
+      disposition_notes: `Call rejected/declined on screen by ${currentUser?.name || 'Agent'}`,
+      recording_file_path: null,
+      recording_duration: 0
+    };
+
+    setCalls(prev => [rejectedLog, ...prev]);
+    setStats(prev => ({
+      ...prev,
+      total_calls_today: prev.total_calls_today + 1,
+      missed_today: prev.missed_today + 1
+    }));
+    setActiveCallEvent(null);
+  };
+
+  // Handle Dismiss Call (Agent closed popup window without answering/rejecting)
+  const handleDismissCall = async (callId) => {
+    const callerNum = activeCallEvent?.caller_number || 'Unknown Caller';
+    const custName = activeCallEvent?.customer?.full_name || 'Caller';
+
+    try {
+      if (callId) {
+        await fetch(`/api/calls/${callId}/dismiss`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent_name: currentUser?.name || 'Agent' })
+        });
+      }
+      await fetch('/api/realtime/clear', { method: 'POST' });
+    } catch (e) {}
+
+    const missedLog = {
+      id: callId || Date.now(),
+      customer_number: callerNum,
+      customer_name: custName,
+      company_name: activeCallEvent?.customer?.company_name || '—',
+      call_type: 'INCOMING',
+      call_status: 'MISSED',
+      agent_name: currentUser?.name || 'Agent',
+      device_name: activeCallEvent?.device_name || activeShift?.device_name || 'Terminal Phone',
+      start_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      duration_seconds: 0,
+      disposition: 'MISSED',
+      disposition_notes: `Popup window closed/dismissed by ${currentUser?.name || 'Agent'}`,
+      recording_file_path: null,
+      recording_duration: 0
+    };
+
+    setCalls(prev => [missedLog, ...prev]);
+    setStats(prev => ({
+      ...prev,
+      total_calls_today: prev.total_calls_today + 1,
+      missed_today: prev.missed_today + 1
+    }));
     setActiveCallEvent(null);
   };
 
@@ -375,8 +502,11 @@ export default function App() {
           callEvent={activeCallEvent}
           onClose={() => setActiveCallEvent(null)}
           onSaveDisposition={handleSaveDisposition}
-          onSimulateAnswer={() => setActiveCallEvent(prev => ({ ...prev, event: 'ANSWERED' }))}
+          onSimulateAnswer={() => handleAnswerCall(activeCallEvent.call_log_id)}
           onSimulateEnd={() => setActiveCallEvent(prev => ({ ...prev, event: 'ENDED' }))}
+          onRejectCall={handleRejectCall}
+          onDismissCall={handleDismissCall}
+          onAnswerCall={handleAnswerCall}
         />
       )}
 
