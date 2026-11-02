@@ -71,7 +71,7 @@ export default function HelpGuideModal({ isOpen, onClose }) {
             </div>
             <div>
               <h3 className="font-extrabold text-base tracking-tight">Telephony System Procedures Guide</h3>
-              <p className="text-xs text-brand-100">Central laptop server storage &amp; mobile recording setup</p>
+              <p className="text-xs text-brand-100">Central Server storage &amp; mobile recording setup</p>
             </div>
           </div>
           <button 
@@ -91,12 +91,12 @@ export default function HelpGuideModal({ isOpen, onClose }) {
             <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60">
               <div className="flex items-center gap-2 font-bold text-xs text-blue-900 dark:text-blue-300 mb-1">
                 <HardDrive className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>All Recordings Saved on Your Laptop</span>
+                <span>All Recordings Saved on Server</span>
               </div>
               <p className="text-xs text-blue-800/80 dark:text-blue-300/80 leading-relaxed">
-                Your laptop acts as the central private server. All audio files from all 5 phones are uploaded directly to:
+                The centralized Server stores all audio files from all 5+ smartphones directly at the specified storage folder:
                 <code className="block mt-1 bg-white/80 dark:bg-slate-900/80 px-2 py-0.5 rounded font-mono text-[10px]">
-                  E:\TeleCalling\backend\storage\recordings\
+                  backend/storage/recordings/
                 </code>
               </p>
             </div>
@@ -107,7 +107,7 @@ export default function HelpGuideModal({ isOpen, onClose }) {
                 <span>Auto-Purge Mobile Phone Storage</span>
               </div>
               <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
-                As soon as the laptop server confirms receipt of the audio file (HTTP 200), the app <strong>automatically deletes the local audio from the mobile</strong> to keep phone memory 100% free!
+                As soon as the Server confirms receipt of the audio file (HTTP 200), the companion app <strong>automatically deletes the local audio from the mobile</strong> to keep phone memory 100% free!
               </p>
             </div>
 
@@ -194,3 +194,4 @@ export default function HelpGuideModal({ isOpen, onClose }) {
     </div>
   );
 }
+

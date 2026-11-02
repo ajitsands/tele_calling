@@ -20,7 +20,8 @@ class RecordingController extends Controller {
         $ext = pathinfo($file['name'], PATHINFO_EXTENSION) ?: 'mp3';
         $safeName = 'rec_' . date('Ymd_His') . '_' . uniqid() . '.' . $ext;
         
-        $storageDir = __DIR__ . '/../../storage/recordings';
+        $config = require __DIR__ . '/../../config/config.php';
+        $storageDir = $config['app']['storage_path'] ?? (__DIR__ . '/../../storage/recordings');
         if (!is_dir($storageDir)) {
             mkdir($storageDir, 0777, true);
         }

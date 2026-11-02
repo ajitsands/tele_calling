@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TeleCalling Guide — Call Recording & Central Laptop Server</title>
+  <title>TeleCalling Guide — Call Recording & Central Server Operations</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -39,20 +39,20 @@
     <!-- Hero Card -->
     <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-3xl p-8 text-white shadow-xl">
       <span class="px-3 py-1 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider backdrop-blur inline-block mb-3">
-        Architecture Overview
+        Server Architecture
       </span>
-      <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">Centralized Call Recording to Laptop Server</h2>
+      <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">Centralized Call Recording on Dedicated Server</h2>
       <p class="text-blue-100 text-sm max-w-2xl leading-relaxed">
-        All 5+ telecaller smartphones upload their recorded voice conversations directly to your laptop over the local Wi-Fi network. After verified storage, files are automatically purged from phones to guarantee zero memory exhaustion.
+        All 5+ telecaller smartphones upload their recorded voice conversations directly to your central Server over the local Wi-Fi network. After verified storage, files are automatically purged from phones to guarantee zero memory exhaustion.
       </p>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/20 text-xs">
         <div>
-          <span class="opacity-75 block mb-0.5">Laptop Server Endpoint</span>
+          <span class="opacity-75 block mb-0.5">Central Server API Endpoint</span>
           <code class="bg-black/25 px-2 py-0.5 rounded text-[11px] font-bold">http://192.168.8.11:8000</code>
         </div>
         <div>
-          <span class="opacity-75 block mb-0.5">Laptop Storage Folder</span>
+          <span class="opacity-75 block mb-0.5">Server Storage Folder Path</span>
           <code class="bg-black/25 px-2 py-0.5 rounded text-[11px] font-bold">backend/storage/recordings/</code>
         </div>
         <div>
@@ -74,15 +74,15 @@
           <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs mb-3">A</div>
           <h4 class="font-bold text-sm text-slate-900 mb-1">1. Live Call on Smartphone</h4>
           <p class="text-xs text-slate-600 leading-relaxed">
-            The customer calls the telecaller. The laptop pops up customer history instantly. The phone dialer records the two-way conversation audio.
+            The customer calls the telecaller. The Server web workstation pops up customer history instantly. The phone dialer records the two-way conversation audio.
           </p>
         </div>
 
         <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
           <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs mb-3">B</div>
-          <h4 class="font-bold text-sm text-slate-900 mb-1">2. Wi-Fi Upload to Laptop</h4>
+          <h4 class="font-bold text-sm text-slate-900 mb-1">2. Wi-Fi Upload to Server</h4>
           <p class="text-xs text-slate-600 leading-relaxed">
-            When you hang up, the TeleCalling Gateway detects the audio file and sends a multipart stream to <code class="bg-slate-200 px-1 rounded">/api/recordings/upload</code> on your laptop.
+            When you hang up, the TeleCalling Gateway detects the audio file and streams it to <code class="bg-slate-200 px-1 rounded">/api/recordings/upload</code> on the Server.
           </p>
         </div>
 
@@ -90,7 +90,7 @@
           <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs mb-3">C</div>
           <h4 class="font-bold text-sm text-emerald-950 mb-1">3. Auto-Delete from Phone</h4>
           <p class="text-xs text-emerald-800 leading-relaxed">
-            Once your laptop confirms the file is safely written to disk, the app immediately executes <code class="bg-emerald-200/60 px-1 rounded">file.delete()</code>, leaving phone storage 100% free!
+            Once the Server confirms the file is safely written to disk, the app immediately executes <code class="bg-emerald-200/60 px-1 rounded">file.delete()</code>, leaving phone storage 100% free!
           </p>
         </div>
       </div>
@@ -167,10 +167,10 @@
     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
       <h3 class="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
         <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">3</span>
-        How to Verify Recordings on Your Laptop
+        How to Verify Recordings on the Server
       </h3>
       <p class="text-xs text-slate-600 leading-relaxed mb-4">
-        Once a call finishes and you hang up, open your laptop browser:
+        Once a call finishes and you hang up, open the web application:
       </p>
       <div class="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
         <div class="flex-1">
@@ -179,7 +179,7 @@
         </div>
         <div class="flex-1">
           <p class="font-bold text-slate-900 mb-1">2. Click the Play ▶ Button</p>
-          <p class="text-slate-500">Each completed call displays an audio player pill. Click it to listen to the recorded conversation instantly.</p>
+          <p class="text-slate-500">Each completed call displays an audio player pill. Click it to listen to the recorded conversation streamed directly from the Server.</p>
         </div>
       </div>
     </div>
@@ -191,7 +191,7 @@
     <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
       <p>TeleFlow Pro — Multi-Terminal Call Management System</p>
       <p class="font-semibold text-slate-700">
-        Powered and Engineered by <span class="text-blue-600">SaNDS Lab Middle East W.L.L</span>
+        Powered and Engineered by <span class="text-blue-600 font-bold">SaNDS Lab Middle East W.L.L</span>
       </p>
     </div>
   </footer>

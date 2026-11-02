@@ -116,7 +116,7 @@ object RecordingSyncService {
             if (responseCode in 200..299) {
                 try {
                     val deleted = file.delete()
-                    Log.i(TAG, "Recording uploaded to laptop. Local audio deleted to save phone storage: $deleted (${file.name})")
+                    Log.i(TAG, "Recording uploaded to Server. Local audio deleted to save phone storage: $deleted (${file.name})")
                 } catch (delErr: Exception) {
                     Log.w(TAG, "Could not delete local file: ${delErr.message}")
                 }
