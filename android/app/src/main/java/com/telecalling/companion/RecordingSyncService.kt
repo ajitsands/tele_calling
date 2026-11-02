@@ -14,13 +14,19 @@ object RecordingSyncService {
     private const val TAG = "RecordingSync"
     private val executor = Executors.newSingleThreadExecutor()
 
-    // Common phone call recording paths across Samsung, Xiaomi/MIUI, OnePlus, Oppo, Vivo
+    // Common phone call recording paths across Samsung, Xiaomi/MIUI, OnePlus, Oppo, Vivo, Google Dialer
     private val RECORDING_DIRECTORIES = listOf(
         "Recordings/Call",
-        "MIUI/sound_recorder/call_rec",
         "Recordings",
         "CallRecordings",
-        "Music/Recordings/Call"
+        "Music/Recordings/Call",
+        "Music/Recordings",
+        "Sounds/CallRecordings",
+        "Sounds",
+        "ColorOS/CallRecordings",
+        "PhoneRecordings",
+        "MIUI/sound_recorder/call_rec",
+        "Download"
     )
 
     fun triggerRecordingSync(context: Context, callerNumber: String) {
