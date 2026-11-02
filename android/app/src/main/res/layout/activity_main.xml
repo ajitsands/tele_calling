@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#F8FAFC">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="TeleCalling Mobile Gateway"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#0F172A"
+        android:paddingBottom="8dp" />
+
+    <TextView
+        android:id="@+id/txtDeviceUuid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Detecting Device..."
+        android:textSize="14sp"
+        android:textColor="#475569"
+        android:paddingBottom="24dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Local Wi-Fi Server Base URL"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#1E293B" />
+
+    <EditText
+        android:id="@+id/edtServerUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="http://192.168.1.100:8000"
+        android:inputType="textUri"
+        android:background="#FFFFFF"
+        android:padding="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btnSaveUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Connect &amp; Start Service"
+        android:backgroundTint="#2563EB"
+        android:textColor="#FFFFFF" />
+
+    <Button
+        android:id="@+id/btnTestCall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Send Test Incoming Call Event"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="#059669"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>
+
