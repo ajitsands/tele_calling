@@ -124,7 +124,10 @@ class DeviceController extends Controller {
         $body = $this->getJsonBody();
         $deviceUuid = $body['device_uuid'] ?? '';
         $battery = isset($body['battery_level']) ? (int)$body['battery_level'] : null;
-        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+        $ip = $body['ip_address'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
+        if ($ip === '127.0.0.1' && !empty($body['ip_address'])) {
+            $ip = $body['ip_address'];
+        }
 
         if (empty($deviceUuid)) {
             $this->error('Device UUID is required');
@@ -133,12 +136,19 @@ class DeviceController extends Controller {
         $db = Database::getConnection();
         $stmt = $db->prepare("
             UPDATE devices 
-            SET last_heartbeat = CURRENT_TIMESTAMP, status = 'ONLINE', battery_level = COALESCE(?, battery_level), ip_address = COALESCE(?, ip_address)
+            SET last_heartbeat = CURRENT_TIMESTAMP, 
+                status = 'ONLINE', 
+                battery_level = COALESCE(?, battery_level), 
+                ip_address = COALESCE(?, ip_address)
             WHERE device_uuid = ?
         ");
         $stmt->execute([$battery, $ip, $deviceUuid]);
 
-        $this->success('Heartbeat received');
+        $this->success('Heartbeat received', [
+            'device_uuid' => $deviceUuid,
+            'ip_address' => $ip,
+            'battery_level' => $battery
+        ]);
     }
 
     public function register(): void {

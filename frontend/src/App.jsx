@@ -17,11 +17,17 @@ export default function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Active User & Shift mapping
-  const [currentUser, setCurrentUser] = useState({
-    id: 2,
-    name: 'Priya Sharma',
-    email: 'priya@telecalling.lan',
-    role: 'TELECALLER'
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tele_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      id: 2,
+      name: 'Ajit (Telecaller)',
+      email: 'ajit@telecalling.lan',
+      role: 'TELECALLER'
+    };
   });
 
   const [activeShift, setActiveShift] = useState({
@@ -65,16 +71,36 @@ export default function App() {
     localStorage.setItem('tele_devices', JSON.stringify(devices));
   }, [devices]);
 
-  // Fetch registered devices from backend on load
+  // Fetch registered devices from backend on load & poll periodically for live battery & IP updates
   useEffect(() => {
-    fetch('/api/devices')
-      .then(res => res.json())
-      .then(data => {
-        if (data?.data?.devices && data.data.devices.length > 0) {
-          setDevices(data.data.devices);
-        }
-      })
-      .catch(() => {});
+    const fetchDevices = () => {
+      fetch('/api/devices')
+        .then(res => res.json())
+        .then(data => {
+          if (data?.data?.devices && data.data.devices.length > 0) {
+            setDevices(prev => {
+              // Merge live server battery and IP into devices
+              return prev.map(localDev => {
+                const remote = data.data.devices.find(d => d.device_uuid === localDev.device_uuid || d.id === localDev.id);
+                if (remote) {
+                  return {
+                    ...localDev,
+                    battery_level: remote.battery_level !== null ? remote.battery_level : localDev.battery_level,
+                    ip_address: remote.ip_address || localDev.ip_address,
+                    status: remote.status || localDev.status
+                  };
+                }
+                return localDev;
+              });
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchDevices();
+    const devInterval = setInterval(fetchDevices, 4000);
+    return () => clearInterval(devInterval);
   }, []);
 
   const [users, setUsers] = useState([
@@ -376,6 +402,7 @@ export default function App() {
         currentUser={currentUser}
         onSelectUser={(newUser) => {
           setCurrentUser(newUser);
+          localStorage.setItem('tele_user', JSON.stringify(newUser));
           // Look up device mapped to this user
           const dev = devices.find(d => d.active_user_id === newUser.id);
           if (dev) {
@@ -390,6 +417,19 @@ export default function App() {
           } else {
             setActiveShift(null);
           }
+        }}
+        onUpdateUserName={(newName) => {
+          const updated = { ...currentUser, name: newName };
+          setCurrentUser(updated);
+          localStorage.setItem('tele_user', JSON.stringify(updated));
+
+          // Also update active shift and devices list
+          setDevices(prev => prev.map(d => {
+            if (d.active_user_id === currentUser.id) {
+              return { ...d, active_user_name: newName };
+            }
+            return d;
+          }));
         }}
       />
 

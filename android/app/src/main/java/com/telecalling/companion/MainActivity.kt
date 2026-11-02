@@ -46,7 +46,10 @@ class MainActivity : AppCompatActivity() {
                 val url = edtServerUrl.text.toString().trim()
                 if (url.isNotEmpty()) {
                     prefs.edit().putString("server_url", url).apply()
-                    Toast.makeText(this, "Server URL saved! Starting Gateway Service...", Toast.LENGTH_SHORT).show()
+                    val battery = NetworkManager.getBatteryPercentage(this)
+                    val ip = NetworkManager.getLocalIpAddress(this)
+                    NetworkManager.sendHeartbeat(this, battery)
+                    Toast.makeText(this, "Connected! IP: $ip, Battery: $battery%", Toast.LENGTH_SHORT).show()
                     TelephonyTrackingService.start(this)
                 }
             }
