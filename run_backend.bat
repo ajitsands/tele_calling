@@ -2,7 +2,9 @@
 title TeleCalling PHP Backend
 echo ========================================================
 echo Starting TeleCalling PHP MVC Backend API Server
-echo Endpoint: http://localhost:8000
+echo ========================================================
+echo Current Wi-Fi / Local Server IP:
+ipconfig | findstr /i "IPv4"
 echo ========================================================
 
 cd /d "%~dp0backend\public"
