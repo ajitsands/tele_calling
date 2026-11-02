@@ -7,10 +7,7 @@ import {
   BarChart3, 
   Volume2, 
   VolumeX, 
-  Sun, 
-  Moon, 
   Palette, 
-  LogOut, 
   Radio, 
   PlayCircle,
   RefreshCw
@@ -33,11 +30,11 @@ export default function HorizontalNavbar({
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const navItems = [
-    { id: 'desk', label: 'Live Desk', icon: Radio },
-    { id: 'calls', label: 'Call Logs & Audio', icon: History },
-    { id: 'crm', label: 'Customer Directory', icon: Users },
-    { id: 'devices', label: 'Devices & Shifts', icon: Smartphone },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'desk', label: 'Live Desk', icon: Radio, count: null },
+    { id: 'calls', label: 'Call Logs & Audio', icon: History, count: '14' },
+    { id: 'crm', label: 'Customer Directory', icon: Users, count: '5' },
+    { id: 'devices', label: 'Devices & Shifts', icon: Smartphone, count: '5' },
+    { id: 'analytics', label: 'Analytics & Reports', icon: BarChart3, count: null },
   ];
 
   const themes = [
@@ -49,80 +46,64 @@ export default function HorizontalNavbar({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 transition-colors shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+    <header className="sticky top-0 z-40 w-full bg-white dark:bg-slate-900 shadow-xs border-b border-slate-200 dark:border-slate-800 select-none">
+      
+      {/* ========================================================
+          TIER 1: Primary Header Bar (Full Width)
+         ======================================================== */}
+      <div className="w-full px-4 sm:px-6 lg:px-8 border-b border-slate-100 dark:border-slate-800/80">
+        <div className="flex items-center justify-between h-14 gap-4">
           
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
-              <PhoneCall className="w-5 h-5" />
+          {/* Left: Brand + Mapped Phone Pill */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                <PhoneCall className="w-5 h-5" />
+              </div>
+              <div className="leading-tight">
+                <span className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  TeleFlow<span className="text-brand-600 dark:text-brand-500">Pro</span>
+                </span>
+                <span className="hidden sm:inline-block ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                  LAN Gateway
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                TeleFlow<span className="text-brand-600 dark:text-brand-500">Pro</span>
+
+            {/* Active Mapped Phone Pill */}
+            <div 
+              onClick={onOpenShiftModal}
+              className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/80 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-semibold cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs"
+              title="Click to change or manage assigned terminal phone"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                LAN Telephony
-              </span>
+              <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              {activeShift ? (
+                <span>
+                  <strong>{activeShift.device_name}</strong> ({activeShift.sim_number})
+                </span>
+              ) : (
+                <span className="text-amber-700 dark:text-amber-400">
+                  ⚠️ No Phone Mapped • Click to Assign
+                </span>
+              )}
+              <RefreshCw className="w-3 h-3 ml-0.5 opacity-60 hover:opacity-100" />
             </div>
           </div>
 
-          {/* Active Mapped Phone & Shift Status Pill */}
-          <div 
-            onClick={onOpenShiftModal}
-            className="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-900 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-medium cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-xs"
-            title="Click to change or manage assigned terminal phone"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            {activeShift ? (
-              <span>
-                <strong>{activeShift.device_name}</strong> ({activeShift.sim_number}) • <span className="opacity-80">{activeShift.shift_name}</span>
-              </span>
-            ) : (
-              <span className="text-amber-700 dark:text-amber-400 font-medium">
-                ⚠️ No Phone Mapped • Click to Assign Device
-              </span>
-            )}
-            <RefreshCw className="w-3 h-3 ml-1 opacity-70" />
-          </div>
-
-          {/* Horizontal Navigation Menu */}
-          <nav className="flex items-center space-x-1 overflow-x-auto py-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all shrink-0 ${
-                    isActive 
-                      ? 'bg-brand-600 text-white shadow-sm' 
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Right Action Tools */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right Tools: Simulator Trigger, Sound, Theme, User */}
+          <div className="flex items-center gap-2.5">
             {/* Call Simulator Trigger Button */}
             <button
               onClick={onOpenSimulator}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition"
-              title="Test Incoming Call Pop-up instantly"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition"
+              title="Simulate Incoming Call Pop-up"
             >
               <PlayCircle className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Simulate Call</span>
+              <span>Simulate Call</span>
             </button>
 
             {/* Audio Toggle */}
@@ -143,7 +124,7 @@ export default function HorizontalNavbar({
               <button
                 onClick={() => setShowThemeMenu(!showThemeMenu)}
                 className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                title="Change UI Theme & Colors"
+                title="Change UI Theme"
               >
                 <Palette className="w-4 h-4" />
               </button>
@@ -154,7 +135,7 @@ export default function HorizontalNavbar({
                   onMouseLeave={() => setShowThemeMenu(false)}
                 >
                   <div className="px-3 py-1 font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
-                    Select Workspace Theme
+                    Workspace Theme
                   </div>
                   {themes.map((t) => (
                     <button
@@ -178,18 +159,21 @@ export default function HorizontalNavbar({
               )}
             </div>
 
-            {/* User Profile & Switcher */}
+            {/* Telecaller Profile Pill */}
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
               >
                 <div className="w-7 h-7 rounded-full bg-brand-600 text-white font-bold text-xs flex items-center justify-center">
                   {user ? user.name.charAt(0) : 'U'}
                 </div>
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 hidden sm:inline">
-                  {user ? user.name.split(' ')[0] : 'User'}
-                </span>
+                <div className="text-left hidden sm:block">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-none">
+                    {user ? user.name.split(' ')[0] : 'User'}
+                  </p>
+                  <span className="text-[10px] text-slate-400 leading-none">{user?.role}</span>
+                </div>
               </button>
 
               {showUserMenu && (
@@ -200,9 +184,6 @@ export default function HorizontalNavbar({
                   <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
                     <p className="font-semibold text-slate-900 dark:text-white">{user?.name}</p>
                     <p className="text-slate-500 dark:text-slate-400 text-[11px] truncate">{user?.email}</p>
-                    <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
-                      {user?.role}
-                    </span>
                   </div>
                   <button
                     onClick={() => {
@@ -232,7 +213,42 @@ export default function HorizontalNavbar({
 
         </div>
       </div>
+
+      {/* ========================================================
+          TIER 2: Horizontal Menu Bar (Bottom of Header, Full Width, Fixed/Not Scrolling)
+         ======================================================== */}
+      <div className="w-full px-4 sm:px-6 lg:px-8 bg-slate-50/70 dark:bg-slate-900/70">
+        <nav className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto py-1.5 scrollbar-none">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentTab(item.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all shrink-0 ${
+                  isActive 
+                    ? 'bg-brand-600 text-white shadow-xs' 
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{item.label}</span>
+                {item.count && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    isActive 
+                      ? 'bg-white/20 text-white' 
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}>
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
     </header>
   );
 }
-
