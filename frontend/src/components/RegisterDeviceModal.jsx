@@ -7,7 +7,7 @@ export default function RegisterDeviceModal({ isOpen, onClose, onRegisterDevice 
   const [activeTab, setActiveTab] = useState('manual'); // 'manual' or 'app'
   const [deviceName, setDeviceName] = useState('');
   const [simNumber, setSimNumber] = useState('');
-  const [androidVersion, setAndroidVersion] = useState('Android 14');
+  const [androidVersion, setAndroidVersion] = useState('Android 16');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
@@ -101,19 +101,33 @@ export default function RegisterDeviceModal({ isOpen, onClose, onRegisterDevice 
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Android Version
               </label>
-              <select
-                value={androidVersion}
-                onChange={(e) => setAndroidVersion(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              >
-                <option value="Android 15">Android 15</option>
-                <option value="Android 14">Android 14</option>
-                <option value="Android 13">Android 13</option>
-                <option value="Android 12">Android 12</option>
-                <option value="Android 11">Android 11</option>
-                <option value="Android 10">Android 10</option>
-                <option value="Android 9">Android 9</option>
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={androidVersion}
+                  onChange={(e) => setAndroidVersion(e.target.value)}
+                  className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                >
+                  <option value="Android 16">Android 16 (Latest)</option>
+                  <option value="Android 15">Android 15</option>
+                  <option value="Android 14">Android 14</option>
+                  <option value="Android 13">Android 13</option>
+                  <option value="Android 12">Android 12</option>
+                  <option value="Android 11">Android 11</option>
+                  <option value="Android 10">Android 10</option>
+                  <option value="Android 9">Android 9</option>
+                  <option value="Custom">Custom Version...</option>
+                </select>
+
+                {androidVersion === 'Custom' && (
+                  <input
+                    type="text"
+                    placeholder="e.g. Android 16.1"
+                    onChange={(e) => setAndroidVersion(e.target.value)}
+                    className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    autoFocus
+                  />
+                )}
+              </div>
             </div>
 
             <div className="pt-2">
@@ -163,3 +177,4 @@ export default function RegisterDeviceModal({ isOpen, onClose, onRegisterDevice 
     </div>
   );
 }
+
