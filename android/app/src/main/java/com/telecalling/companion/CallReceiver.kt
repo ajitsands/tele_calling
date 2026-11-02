@@ -16,24 +16,28 @@ class CallReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_NEW_OUTGOING_CALL) {
-            savedNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
-            isIncoming = false
-            return
-        }
-
-        if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
-            val stateStr = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-            val incomingNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
-
-            var state = TelephonyManager.CALL_STATE_IDLE
-            if (stateStr == TelephonyManager.EXTRA_STATE_RINGING) {
-                state = TelephonyManager.CALL_STATE_RINGING
-            } else if (stateStr == TelephonyManager.EXTRA_STATE_OFFHOOK) {
-                state = TelephonyManager.CALL_STATE_OFFHOOK
+        try {
+            if (intent.action == Intent.ACTION_NEW_OUTGOING_CALL) {
+                savedNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
+                isIncoming = false
+                return
             }
 
-            onCallStateChanged(context, state, incomingNumber ?: savedNumber)
+            if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
+                val stateStr = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
+                val incomingNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+
+                var state = TelephonyManager.CALL_STATE_IDLE
+                if (stateStr == TelephonyManager.EXTRA_STATE_RINGING) {
+                    state = TelephonyManager.CALL_STATE_RINGING
+                } else if (stateStr == TelephonyManager.EXTRA_STATE_OFFHOOK) {
+                    state = TelephonyManager.CALL_STATE_OFFHOOK
+                }
+
+                onCallStateChanged(context, state, incomingNumber ?: savedNumber)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error in onReceive", t)
         }
     }
 
