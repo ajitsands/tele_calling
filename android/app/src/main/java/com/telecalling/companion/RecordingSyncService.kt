@@ -111,6 +111,16 @@ object RecordingSyncService {
             val responseCode = conn.responseCode
             Log.i(TAG, "Recording upload response code: $responseCode")
             conn.disconnect()
+
+            // If upload succeeded (200 OK), delete local audio from phone to prevent memory fill-up
+            if (responseCode in 200..299) {
+                try {
+                    val deleted = file.delete()
+                    Log.i(TAG, "Recording uploaded to laptop. Local audio deleted to save phone storage: $deleted (${file.name})")
+                } catch (delErr: Exception) {
+                    Log.w(TAG, "Could not delete local file: ${delErr.message}")
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to upload recording: ${e.message}")
         }
