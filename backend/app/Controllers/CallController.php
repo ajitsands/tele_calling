@@ -21,20 +21,42 @@ class CallController extends Controller {
 
         $db = Database::getConnection();
 
-        // 1. Resolve Device
+        // 1. Resolve Device (or Auto-Register on the fly)
         if ($deviceId > 0) {
             $devStmt = $db->prepare("SELECT * FROM devices WHERE id = ?");
             $devStmt->execute([$deviceId]);
+            $device = $devStmt->fetch();
         } else {
             $devStmt = $db->prepare("SELECT * FROM devices WHERE device_uuid = ?");
             $devStmt->execute([$deviceUuid]);
+            $device = $devStmt->fetch();
         }
-        $device = $devStmt->fetch();
 
         if (!$device) {
-            $this->error('Device not recognized', 404);
+            // Auto-register new mobile phone (e.g. OPPO CPH2697)
+            $devName = trim($body['device_name'] ?? 'Mobile Phone (' . substr($deviceUuid, 0, 14) . ')');
+            $simNum = trim($body['sim_number'] ?? '+91 98100 99999');
+            $androidVer = trim($body['android_version'] ?? 'Android 16');
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '192.168.1.1';
+
+            $insertDev = $db->prepare("
+                INSERT INTO devices (device_uuid, device_name, sim_number, android_version, ip_address, last_heartbeat, status)
+                VALUES (?, ?, ?, ?, ?, NOW(), 'ONLINE')
+            ");
+            $insertDev->execute([$deviceUuid, $devName, $simNum, $androidVer, $ip]);
+            $deviceId = (int)$db->lastInsertId();
+
+            $device = [
+                'id' => $deviceId,
+                'device_uuid' => $deviceUuid,
+                'device_name' => $devName,
+                'sim_number' => $simNum,
+                'android_version' => $androidVer,
+                'status' => 'ONLINE'
+            ];
+        } else {
+            $deviceId = (int)$device['id'];
         }
-        $deviceId = (int)$device['id'];
 
         // 2. Identify Active Telecaller mapped to this device
         $assignStmt = $db->prepare("
@@ -47,7 +69,8 @@ class CallController extends Controller {
         $assignStmt->execute([$deviceId]);
         $assignment = $assignStmt->fetch();
 
-        $activeUserId = $assignment ? (int)$assignment['user_id'] : 1; // Fallback to admin if unassigned
+        // If device has no active shift assignment, map to Priya Sharma (user_id 2) by default
+        $activeUserId = $assignment ? (int)$assignment['user_id'] : 2;
 
         // 3. Normalize Phone Number and Find/Create Customer
         $cleanNumber = preg_replace('/[^\+0-9]/', '', $callerNumber);
@@ -166,6 +189,7 @@ class CallController extends Controller {
         // 6. Broadcast / Realtime Event Notification Store
         // Write event to a temporary file/table for immediate SSE polling
         $eventPayload = [
+            'id' => time() . '_' . rand(1000, 9999),
             'event' => $event,
             'call_log_id' => $callLogId,
             'device_id' => $deviceId,

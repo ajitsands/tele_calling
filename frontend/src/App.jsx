@@ -120,6 +120,31 @@ export default function App() {
     }
   };
 
+  // Real-time Event Listener: Polls server /api/realtime/latest every 1.5 seconds
+  const lastProcessedEventIdRef = useRef(null);
+
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/realtime/latest');
+        if (!res.ok) return;
+        const json = await res.json();
+        const ev = json?.data?.event;
+        if (ev && ev.id && ev.id !== lastProcessedEventIdRef.current) {
+          lastProcessedEventIdRef.current = ev.id;
+          if (ev.event === 'RINGING') {
+            playRingChime();
+          }
+          setActiveCallEvent(ev);
+        }
+      } catch (err) {
+        // network quiet catch
+      }
+    }, 1500);
+
+    return () => clearInterval(pollInterval);
+  }, [soundEnabled]);
+
   // Real-time Event Receiver (SSE or Simulated Event Dispatcher)
   const triggerCallEvent = (payload) => {
     const isTargetUser = !activeShift || payload.device_id === activeShift.device_id;

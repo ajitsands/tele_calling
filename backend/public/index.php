@@ -62,7 +62,8 @@ $router->post('/api/customers', [CustomerController::class, 'store']);
 $router->post('/api/recordings/upload', [RecordingController::class, 'upload']);
 $router->get('/api/recordings/{id}/stream', [RecordingController::class, 'stream']);
 
-// Realtime SSE Event Stream
+// Realtime SSE & Polling Event Stream
+$router->get('/api/realtime/latest', [EventStreamController::class, 'latest']);
 $router->get('/api/realtime/stream', [EventStreamController::class, 'stream']);
 
 // Dispatch Request

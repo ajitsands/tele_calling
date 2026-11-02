@@ -52,8 +52,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             btnTestCall.setOnClickListener {
+                val url = edtServerUrl.text.toString().trim()
+                if (url.isNotEmpty()) {
+                    prefs.edit().putString("server_url", url).apply()
+                }
                 NetworkManager.sendCallEvent(this, "RINGING", "+919876543210", "INCOMING")
-                Toast.makeText(this, "Sent test RINGING event to server", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Dispatched test incoming call to server!", Toast.LENGTH_SHORT).show()
             }
 
             // Check permissions first

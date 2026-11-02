@@ -7,6 +7,17 @@ use Core\Controller;
 use Core\Database;
 
 class EventStreamController extends Controller {
+    public function latest(): void {
+        $eventFile = __DIR__ . '/../../storage/active_event.json';
+        if (file_exists($eventFile)) {
+            $content = file_get_contents($eventFile);
+            $eventData = json_decode($content, true);
+            $this->success('Latest event', ['event' => $eventData]);
+        } else {
+            $this->success('No active event', ['event' => null]);
+        }
+    }
+
     public function stream(): void {
         // Disable output buffering
         while (ob_get_level()) {

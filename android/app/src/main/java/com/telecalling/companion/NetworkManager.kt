@@ -37,6 +37,8 @@ object NetworkManager {
 
                 val payload = JSONObject().apply {
                     put("device_uuid", uuid)
+                    put("device_name", Build.MANUFACTURER.uppercase() + " " + Build.MODEL)
+                    put("sim_number", "+91 98100 00000")
                     put("event", event)
                     put("caller_number", callerNumber)
                     put("call_type", callType)
