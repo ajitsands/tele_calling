@@ -1,64 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:background="#F8FAFC">
+    android:background="#F8FAFC"
+    android:fillViewport="true">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="TeleCalling Mobile Gateway"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="#0F172A"
-        android:paddingBottom="8dp" />
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <TextView
-        android:id="@+id/txtDeviceUuid"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Detecting Device..."
-        android:textSize="14sp"
-        android:textColor="#475569"
-        android:paddingBottom="24dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TeleCalling Mobile Gateway"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#0F172A"
+            android:paddingBottom="4dp" />
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Local Wi-Fi Server Base URL"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="#1E293B" />
+        <TextView
+            android:id="@+id/txtDeviceUuid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Detecting Device..."
+            android:textSize="13sp"
+            android:textColor="#475569"
+            android:paddingBottom="16dp" />
 
-    <EditText
-        android:id="@+id/edtServerUrl"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="http://192.168.1.100:8000"
-        android:inputType="textUri"
-        android:background="#FFFFFF"
-        android:padding="12dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp" />
+        <!-- Server Configuration -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Server URL (Port 8000 Required)"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#1E293B" />
 
-    <Button
-        android:id="@+id/btnSaveUrl"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Connect &amp; Start Service"
-        android:backgroundTint="#2563EB"
-        android:textColor="#FFFFFF" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Do NOT use port 3000. Example: http://192.168.100.4:8000"
+            android:textSize="11sp"
+            android:textColor="#64748B"
+            android:paddingBottom="4dp" />
 
-    <Button
-        android:id="@+id/btnTestCall"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Send Test Incoming Call Event"
-        android:layout_marginTop="12dp"
-        android:backgroundTint="#059669"
-        android:textColor="#FFFFFF" />
+        <EditText
+            android:id="@+id/edtServerUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="http://192.168.100.4:8000"
+            android:inputType="textUri"
+            android:background="#FFFFFF"
+            android:padding="12dp"
+            android:textColor="#0F172A"
+            android:layout_marginBottom="14dp" />
 
-</LinearLayout>
+        <!-- SIM Number Configuration -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Terminal SIM Phone Number"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#1E293B" />
 
+        <EditText
+            android:id="@+id/edtSimNumber"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="+97336533695"
+            android:inputType="phone"
+            android:background="#FFFFFF"
+            android:padding="12dp"
+            android:textColor="#0F172A"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Buttons -->
+        <Button
+            android:id="@+id/btnSaveUrl"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Connect &amp; Test Server Link"
+            android:backgroundTint="#2563EB"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnTestCall"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Send Test Incoming Call Event"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#059669"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+
+        <!-- Realtime Status Feedback Banner -->
+        <TextView
+            android:id="@+id/txtStatusFeedback"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:padding="14dp"
+            android:background="#E2E8F0"
+            android:text="Status: Ready to connect. Enter server IP and tap Connect."
+            android:textColor="#1E293B"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Troubleshooting Guide:\n• Make sure phone is connected to the same Wi-Fi.\n• Turn OFF Mobile Data so requests go over Wi-Fi.\n• Verify port is :8000 and NOT :3000."
+            android:textColor="#64748B"
+            android:textSize="12sp"
+            android:lineSpacingExtra="3dp" />
+
+    </LinearLayout>
+</ScrollView>

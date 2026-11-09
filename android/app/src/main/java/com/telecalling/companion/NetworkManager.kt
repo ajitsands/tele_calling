@@ -6,8 +6,12 @@ import android.content.IntentFilter
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.Inet4Address
@@ -19,10 +23,16 @@ import java.util.concurrent.Executors
 object NetworkManager {
     private const val TAG = "NetworkManager"
     private val executor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     fun getServerUrl(context: Context): String {
         val prefs = context.getSharedPreferences("telecalling_prefs", Context.MODE_PRIVATE)
-        return prefs.getString("server_url", "http://192.168.8.11:8000") ?: "http://192.168.8.11:8000"
+        return prefs.getString("server_url", "http://192.168.100.4:8000") ?: "http://192.168.100.4:8000"
+    }
+
+    fun getSimNumber(context: Context): String {
+        val prefs = context.getSharedPreferences("telecalling_prefs", Context.MODE_PRIVATE)
+        return prefs.getString("sim_number", "+97336533695") ?: "+97336533695"
     }
 
     fun getDeviceUuid(context: Context): String {
@@ -52,7 +62,6 @@ object NetworkManager {
                 }
             }
 
-            // Fallback: check all network interfaces
             val interfaces = NetworkInterface.getNetworkInterfaces()
             while (interfaces.hasMoreElements()) {
                 val intf = interfaces.nextElement()
@@ -70,7 +79,7 @@ object NetworkManager {
         } catch (e: Exception) {
             Log.w(TAG, "Failed to resolve IP: ${e.message}")
         }
-        return "192.168.8.100"
+        return "192.168.100.1"
     }
 
     fun getBatteryPercentage(context: Context): Int {
@@ -89,19 +98,27 @@ object NetworkManager {
         }
     }
 
-    fun sendCallEvent(context: Context, event: String, callerNumber: String, callType: String) {
+    fun sendCallEvent(
+        context: Context,
+        event: String,
+        callerNumber: String,
+        callType: String,
+        callback: ((Boolean, Int, String) -> Unit)? = null
+    ) {
         executor.execute {
+            var conn: HttpURLConnection? = null
             try {
-                val serverBase = getServerUrl(context)
+                val serverBase = getServerUrl(context).trimEnd('/')
                 val targetUrl = "$serverBase/api/calls/event"
                 val uuid = getDeviceUuid(context)
                 val ip = getLocalIpAddress(context)
                 val battery = getBatteryPercentage(context)
+                val simNumber = getSimNumber(context)
 
                 val payload = JSONObject().apply {
                     put("device_uuid", uuid)
                     put("device_name", Build.MANUFACTURER.uppercase() + " " + Build.MODEL)
-                    put("sim_number", "+97335078079")
+                    put("sim_number", simNumber)
                     put("ip_address", ip)
                     put("battery_level", battery)
                     put("event", event)
@@ -111,11 +128,11 @@ object NetworkManager {
                 }
 
                 val url = URL(targetUrl)
-                val conn = url.openConnection() as HttpURLConnection
+                conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                conn.connectTimeout = 3000
-                conn.readTimeout = 5000
+                conn.connectTimeout = 4000
+                conn.readTimeout = 6000
                 conn.doOutput = true
 
                 OutputStreamWriter(conn.outputStream).use { writer ->
@@ -125,46 +142,77 @@ object NetworkManager {
 
                 val responseCode = conn.responseCode
                 Log.d(TAG, "Sent Call Event: $event ($callerNumber) -> Response Code: $responseCode")
-                conn.disconnect()
+
+                val success = responseCode in 200..299
+                val msg = if (success) "Event $event dispatched successfully (HTTP $responseCode)" else "Server returned HTTP $responseCode"
+                if (callback != null) {
+                    mainHandler.post { callback(success, responseCode, msg) }
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send call event: ${e.message}")
+                val errMsg = "Connection Failed: ${e.javaClass.simpleName} - ${e.message}"
+                Log.e(TAG, "Failed to send call event: $errMsg")
+                if (callback != null) {
+                    mainHandler.post { callback(false, -1, errMsg) }
+                }
+            } finally {
+                conn?.disconnect()
             }
         }
     }
 
-    fun sendHeartbeat(context: Context, batteryLevel: Int) {
+    fun sendHeartbeat(
+        context: Context,
+        batteryLevel: Int,
+        callback: ((Boolean, Int, String) -> Unit)? = null
+    ) {
         executor.execute {
+            var conn: HttpURLConnection? = null
             try {
-                val serverBase = getServerUrl(context)
+                val serverBase = getServerUrl(context).trimEnd('/')
                 val targetUrl = "$serverBase/api/devices/heartbeat"
                 val uuid = getDeviceUuid(context)
                 val ip = getLocalIpAddress(context)
                 val actualBattery = if (batteryLevel > 0) batteryLevel else getBatteryPercentage(context)
+                val simNumber = getSimNumber(context)
 
                 val payload = JSONObject().apply {
                     put("device_uuid", uuid)
                     put("device_name", Build.MANUFACTURER.uppercase() + " " + Build.MODEL)
+                    put("sim_number", simNumber)
                     put("ip_address", ip)
                     put("battery_level", actualBattery)
+                    put("android_version", "Android " + Build.VERSION.RELEASE)
                 }
 
                 val url = URL(targetUrl)
-                val conn = url.openConnection() as HttpURLConnection
+                conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                conn.connectTimeout = 3000
-                conn.readTimeout = 5000
+                conn.connectTimeout = 4000
+                conn.readTimeout = 6000
                 conn.doOutput = true
 
                 OutputStreamWriter(conn.outputStream).use { writer ->
                     writer.write(payload.toString())
                     writer.flush()
                 }
+
                 val responseCode = conn.responseCode
                 Log.d(TAG, "Heartbeat sent (Battery: $actualBattery%, IP: $ip) -> Response: $responseCode")
-                conn.disconnect()
+
+                val success = responseCode in 200..299
+                val msg = if (success) "Heartbeat connected! (HTTP $responseCode)" else "Heartbeat rejected: HTTP $responseCode"
+                if (callback != null) {
+                    mainHandler.post { callback(success, responseCode, msg) }
+                }
             } catch (e: Exception) {
-                Log.w(TAG, "Heartbeat failed: ${e.message}")
+                val errMsg = "Heartbeat Failed: ${e.javaClass.simpleName} - ${e.message}"
+                Log.w(TAG, errMsg)
+                if (callback != null) {
+                    mainHandler.post { callback(false, -1, errMsg) }
+                }
+            } finally {
+                conn?.disconnect()
             }
         }
     }
