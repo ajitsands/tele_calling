@@ -13,9 +13,10 @@ class EventStreamController extends Controller {
             $content = file_get_contents($eventFile);
             $eventData = json_decode($content, true);
 
-            if ($eventData && ($eventData['event'] ?? '') === 'RINGING') {
+            $status = $eventData['event'] ?? '';
+            if ($eventData && in_array($status, ['RINGING', 'ANSWERED', 'OFFHOOK', 'ENDED', 'IDLE', 'MISSED'])) {
                 $epoch = $eventData['epoch_time'] ?? (!empty($eventData['timestamp']) ? strtotime($eventData['timestamp']) : 0);
-                $isRecent = (time() - $epoch) < 60; // Ringing calls remain active up to 60 seconds unless cleared
+                $isRecent = (time() - $epoch) < 90; // Active within last 90 seconds unless cleared
 
                 if ($isRecent) {
                     $this->success('Latest event', ['event' => $eventData]);
@@ -67,7 +68,7 @@ class EventStreamController extends Controller {
                     $content = file_get_contents($eventFile);
                     $eventData = json_decode($content, true);
 
-                    if ($eventData && ($eventData['event'] ?? '') === 'RINGING') {
+                    if ($eventData && in_array($eventData['event'] ?? '', ['RINGING', 'ANSWERED', 'OFFHOOK', 'ENDED', 'IDLE', 'MISSED'])) {
                         $eventUser = (int)($eventData['user_id'] ?? 0);
                         $isAuthorized = ($targetUserId === 0 || $eventUser === $targetUserId || ($user && $user['role'] === 'ADMIN'));
 

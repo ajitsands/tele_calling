@@ -6,6 +6,7 @@ import {
   User, 
   Building, 
   MapPin, 
+  Mail,
   Clock, 
   Calendar, 
   CheckCircle2, 
@@ -14,7 +15,9 @@ import {
   Tag, 
   Save, 
   X,
-  Volume2
+  Volume2,
+  Sparkles,
+  Edit3
 } from 'lucide-react';
 
 export default function CallingPopupModal({ 
@@ -37,12 +40,42 @@ export default function CallingPopupModal({
   const [leadStatus, setLeadStatus] = useState(callEvent.customer?.lead_status || 'QUALIFIED');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync state if callEvent changes
+  const customer = callEvent.customer || {};
+  const isNewCaller = !customer.id || customer.full_name === 'New Prospective Client' || customer.full_name === 'New Caller' || !customer.full_name;
+
+  // Real-time editable caller and company details
+  const [callerName, setCallerName] = useState(
+    customer.full_name && customer.full_name !== 'New Prospective Client' && customer.full_name !== 'New Caller'
+      ? customer.full_name
+      : ''
+  );
+  const [companyName, setCompanyName] = useState(
+    customer.company_name && customer.company_name !== 'Unknown Company'
+      ? customer.company_name
+      : ''
+  );
+  const [city, setCity] = useState(customer.city && customer.city !== 'Local Region' ? customer.city : '');
+  const [email, setEmail] = useState(customer.email || '');
+
+  // Sync state if callEvent changes or phone answers/disconnects
   useEffect(() => {
     if (callEvent.event) {
       setCallState(callEvent.event);
     }
-  }, [callEvent.event]);
+    const cust = callEvent.customer || {};
+    if (cust.full_name && cust.full_name !== 'New Prospective Client' && cust.full_name !== 'New Caller') {
+      setCallerName(cust.full_name);
+    }
+    if (cust.company_name && cust.company_name !== 'Unknown Company') {
+      setCompanyName(cust.company_name);
+    }
+    if (cust.city && cust.city !== 'Local Region') {
+      setCity(cust.city);
+    }
+    if (cust.email) {
+      setEmail(cust.email);
+    }
+  }, [callEvent]);
 
   // Call timer when ANSWERED / IN_PROGRESS
   useEffect(() => {
@@ -66,6 +99,12 @@ export default function CallingPopupModal({
     setIsSubmitting(true);
     await onSaveDisposition({
       call_id: callEvent.call_log_id,
+      customer_id: customer.id,
+      customer_number: callEvent.caller_number,
+      full_name: callerName.trim() || 'New Caller',
+      company_name: companyName.trim() || 'Company Not Specified',
+      city: city.trim(),
+      email: email.trim(),
       call_duration: callDuration,
       disposition,
       disposition_notes: notes,
@@ -76,7 +115,6 @@ export default function CallingPopupModal({
     onClose();
   };
 
-  const customer = callEvent.customer || {};
   const history = callEvent.history || [];
   const customerNotes = callEvent.notes || [];
 
@@ -105,14 +143,14 @@ export default function CallingPopupModal({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-white/20">
-                  {callState === 'RINGING' ? 'Incoming Call Alert' : callState === 'ANSWERED' || callState === 'IN_PROGRESS' ? 'Call In Progress' : 'Call Ended'}
+                  {callState === 'RINGING' ? 'Incoming Call Alert' : callState === 'ANSWERED' || callState === 'IN_PROGRESS' ? 'Call In Progress' : 'Call Ended / Disconnected'}
                 </span>
                 <span className="text-xs opacity-90 font-medium">
                   via {callEvent.device_name || 'Terminal Phone'} ({callEvent.sim_number || ''})
                 </span>
               </div>
               <h2 className="text-xl font-bold tracking-tight">
-                {callEvent.caller_number} {customer.full_name ? `• ${customer.full_name}` : ''}
+                {callEvent.caller_number} {callerName ? `• ${callerName}` : ''} {companyName ? `(${companyName})` : ''}
               </h2>
             </div>
           </div>
@@ -122,6 +160,12 @@ export default function CallingPopupModal({
               <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg font-mono text-base font-bold">
                 <Clock className="w-4 h-4 text-emerald-300" />
                 <span>{formatTimer(callDuration)}</span>
+              </div>
+            )}
+            {callState === 'ENDED' && (
+              <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold text-slate-200">
+                <Clock className="w-3.5 h-3.5 text-slate-300" />
+                <span>Duration: {formatTimer(callDuration)}</span>
               </div>
             )}
             <button 
@@ -142,56 +186,102 @@ export default function CallingPopupModal({
         {/* Modal Body: Split into Customer Info + Past History + Disposition Form */}
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
           
-          {/* Left Column: Customer Profile Snapshot (5 Cols) */}
+          {/* Left Column: Editable Customer Profile & Identity Form (5 Cols) */}
           <div className="md:col-span-5 space-y-4">
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60">
+            <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Customer Profile</span>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  customer.lead_status === 'QUALIFIED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
-                  customer.lead_status === 'PROPOSAL_SENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
-                  customer.lead_status === 'CONVERTED' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' :
-                  'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5 text-brand-600" />
+                  <span>Caller Identity &amp; Profile</span>
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  isNewCaller ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                 }`}>
-                  {customer.lead_status || 'NEW LEAD'}
+                  {isNewCaller ? 'NEW CALLER' : 'EXISTING CRM CONTACT'}
                 </span>
               </div>
 
-              <div className="space-y-2.5 text-sm">
-                <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                  <User className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span className="font-semibold">{customer.full_name || 'Unregistered Lead'}</span>
+              {/* Editable Fields for Caller Name & Company Name */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Caller Full Name</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={callerName}
+                    onChange={(e) => setCallerName(e.target.value)}
+                    placeholder="Enter Caller Name..."
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
                 </div>
 
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                  <Building className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span>{customer.company_name || 'Company Not Specified'}</span>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                    <Building className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Company / Business Name</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Enter Company Name..."
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
                 </div>
 
-                {customer.city && (
-                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                    <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span>{customer.city}</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-brand-500" />
+                      <span>City / Area</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Manama"
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5 text-brand-500" />
+                      <span>Email (Optional)</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email..."
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
 
-                {customer.tags && (
-                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 pt-1">
-                    <Tag className="w-4 h-4 text-slate-400 shrink-0" />
-                    <div className="flex flex-wrap gap-1">
-                      {customer.tags.split(',').map((tag, idx) => (
-                        <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 font-medium">
-                          {tag.trim()}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Lead Status</span>
+                  </label>
+                  <select
+                    value={leadStatus}
+                    onChange={(e) => setLeadStatus(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  >
+                    <option value="NEW">New Lead / Inquiry</option>
+                    <option value="QUALIFIED">Qualified Prospect</option>
+                    <option value="PROPOSAL_SENT">Proposal / Quotation Sent</option>
+                    <option value="CONVERTED">Converted Client</option>
+                    <option value="LOST">Lost / Not Applicable</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* In-Call Fast Actions */}
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60">
+            <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-3">Call Control</span>
               
               {callState === 'RINGING' && (
@@ -232,176 +322,109 @@ export default function CallingPopupModal({
                   className="w-full py-2.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition"
                 >
                   <PhoneOff className="w-4 h-4" />
-                  <span>End Call &amp; Log Disposition</span>
+                  <span>End Call &amp; Save Details</span>
                 </button>
               )}
 
               {callState === 'ENDED' && (
-                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span>Call finished. Please record disposition below.</span>
+                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Call finished! Review caller details &amp; save outcome below.</span>
                 </div>
               )}
             </div>
 
-            {/* Post-Call Outcome & Notes Form */}
-            <form onSubmit={handleSave} className="space-y-3 pt-1">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Call Outcome / Disposition *
-                </label>
-                <select
-                  value={disposition}
-                  onChange={(e) => setDisposition(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                >
-                  <option value="INTERESTED">Interested (High Potential)</option>
-                  <option value="CALLBACK_REQUESTED">Call Back Requested</option>
-                  <option value="PROPOSAL_SENT">Proposal / Quotation Sent</option>
-                  <option value="SALE_CLOSED">Sale / Deal Closed 🎉</option>
-                  <option value="NOT_INTERESTED">Not Interested</option>
-                  <option value="BUSY">Line Busy / Call Again</option>
-                  <option value="WRONG_NUMBER">Wrong Number</option>
-                  <option value="OTHER">Other Outcome</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Customer Notes &amp; Conversation Remarks
-                </label>
-                <textarea
-                  rows="3"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Summarize key points, requirements, prices quoted, customer objections..."
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none placeholder:text-slate-400"
-                ></textarea>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Next Follow-up
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={nextFollowup}
-                    onChange={(e) => setNextFollowup(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Update Lead Stage
-                  </label>
-                  <select
-                    value={leadStatus}
-                    onChange={(e) => setLeadStatus(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  >
-                    <option value="NEW">New</option>
-                    <option value="CONTACTED">Contacted</option>
-                    <option value="QUALIFIED">Qualified</option>
-                    <option value="PROPOSAL_SENT">Proposal Sent</option>
-                    <option value="CONVERTED">Converted</option>
-                    <option value="LOST">Lost</option>
-                  </select>
+            {/* Past Customer History */}
+            {history.length > 0 && (
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Previous Interactions</span>
+                <div className="space-y-2 max-h-36 overflow-y-auto text-xs">
+                  {history.map((h, i) => (
+                    <div key={i} className="p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                      <div className="flex justify-between font-semibold text-slate-700 dark:text-slate-300">
+                        <span>{h.start_time || 'Past Call'}</span>
+                        <span className="text-brand-600">{h.disposition || 'Completed'}</span>
+                      </div>
+                      {h.disposition_notes && (
+                        <p className="text-[11px] text-slate-500 mt-1 italic">"{h.disposition_notes}"</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full mt-2 py-2.5 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                <span>{isSubmitting ? 'Saving...' : 'Save Disposition & Close'}</span>
-              </button>
-            </form>
+            )}
           </div>
 
-          {/* Right Column: Customer History & Prior Conversations (7 Cols) */}
-          <div className="md:col-span-7 flex flex-col h-full space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Previous Conversation History ({history.length} Calls)
-                </h3>
-              </div>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Shared across all shifts &amp; telecallers
-              </span>
-            </div>
-
-            {/* History Feed */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[460px]">
-              {history.length === 0 ? (
-                <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-                  <User className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm font-semibold">First-Time Caller</p>
-                  <p className="text-xs mt-1">No previous call logs found for this phone number.</p>
-                </div>
-              ) : (
-                history.map((item, idx) => (
-                  <div 
-                    key={idx} 
-                    className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 shadow-xs hover:border-brand-500/50 transition"
+          {/* Right Column: Call Outcome & Notes Form (7 Cols) */}
+          <div className="md:col-span-7 flex flex-col justify-between">
+            <form onSubmit={handleSave} className="space-y-4 flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Call Outcome / Disposition *
+                  </label>
+                  <select
+                    value={disposition}
+                    onChange={(e) => setDisposition(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium"
                   >
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                          item.call_type === 'INCOMING' ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300' :
-                          'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                        }`}>
-                          {item.call_type}
-                        </span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">
-                          {item.agent_name || 'Telecaller'}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {item.start_time} • {item.duration_seconds ? `${Math.floor(item.duration_seconds / 60)}m ${item.duration_seconds % 60}s` : '0s'}
-                      </span>
-                    </div>
-
-                    {item.disposition && (
-                      <div className="mb-1.5">
-                        <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                          Outcome: {item.disposition}
-                        </span>
-                      </div>
-                    )}
-
-                    {item.disposition_notes && (
-                      <p className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800/80">
-                        "{item.disposition_notes}"
-                      </p>
-                    )}
-                  </div>
-                ))
-              )}
-
-              {/* Customer Notes Feed */}
-              {customerNotes.length > 0 && (
-                <div className="pt-2">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Agent Notes</h4>
-                  <div className="space-y-2">
-                    {customerNotes.map((n, idx) => (
-                      <div key={idx} className="p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 text-xs">
-                        <div className="flex justify-between text-[11px] font-semibold text-amber-900 dark:text-amber-300 mb-1">
-                          <span>{n.agent_name}</span>
-                          <span className="opacity-70">{n.created_at}</span>
-                        </div>
-                        <p className="text-slate-700 dark:text-slate-300">{n.note}</p>
-                      </div>
-                    ))}
-                  </div>
+                    <option value="INTERESTED">Interested (High Potential)</option>
+                    <option value="CALLBACK_REQUESTED">Call Back Requested</option>
+                    <option value="PROPOSAL_SENT">Proposal / Quotation Sent</option>
+                    <option value="SALE_CLOSED">Sale / Deal Closed 🎉</option>
+                    <option value="NOT_INTERESTED">Not Interested</option>
+                    <option value="BUSY">Line Busy / Call Again</option>
+                    <option value="WRONG_NUMBER">Wrong Number</option>
+                  </select>
                 </div>
-              )}
-            </div>
 
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>Call Interaction Notes</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Details discussed with client</span>
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Enter call notes, requirements, customer feedback, and action points..."
+                    className="w-full px-3 py-2.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Next Follow-up Date (Optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={nextFollowup}
+                    onChange={(e) => setNextFollowup(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Cancel / Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 text-xs font-bold rounded-lg bg-brand-600 hover:bg-brand-700 text-white flex items-center gap-2 shadow-sm transition disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSubmitting ? 'Saving...' : 'Save Caller Details & Disposition'}</span>
+                </button>
+              </div>
+            </form>
           </div>
 
         </div>
@@ -410,4 +433,3 @@ export default function CallingPopupModal({
     </div>
   );
 }
-

@@ -141,13 +141,13 @@ class CallController extends Controller {
             $db->prepare("UPDATE devices SET status = 'BUSY' WHERE id = ?")->execute([$deviceId]);
 
         } elseif ($event === 'ANSWERED' || $event === 'OFFHOOK') {
-            // Find latest ringing call on this device
+            // Find latest ringing call on this device or for this customer number
             $findLog = $db->prepare("
-                SELECT id FROM call_logs 
-                WHERE device_id = ? AND call_status = 'RINGING' 
+                SELECT id, customer_id FROM call_logs 
+                WHERE (device_id = ? OR customer_number = ?) AND call_status = 'RINGING' 
                 ORDER BY id DESC LIMIT 1
             ");
-            $findLog->execute([$deviceId]);
+            $findLog->execute([$deviceId, $cleanNumber]);
             $existing = $findLog->fetch();
 
             if ($existing) {
@@ -161,22 +161,31 @@ class CallController extends Controller {
         } elseif ($event === 'ENDED' || $event === 'IDLE' || $event === 'MISSED') {
             $findLog = $db->prepare("
                 SELECT id, answer_time, start_time, call_status FROM call_logs 
-                WHERE device_id = ? AND call_status IN ('RINGING', 'IN_PROGRESS') 
+                WHERE (device_id = ? OR customer_number = ?) AND call_status IN ('RINGING', 'IN_PROGRESS') 
                 ORDER BY id DESC LIMIT 1
             ");
-            $findLog->execute([$deviceId]);
+            $findLog->execute([$deviceId, $cleanNumber]);
             $existing = $findLog->fetch();
 
             if ($existing) {
                 $callLogId = (int)$existing['id'];
                 $finalStatus = ($existing['call_status'] === 'RINGING' || $event === 'MISSED') ? 'MISSED' : 'COMPLETED';
+
+                // Calculate real duration in seconds
+                $duration = 0;
+                if (!empty($existing['answer_time'])) {
+                    $duration = max(1, time() - strtotime($existing['answer_time']));
+                } elseif (!empty($existing['start_time']) && $finalStatus === 'COMPLETED') {
+                    $duration = max(1, time() - strtotime($existing['start_time']));
+                }
+
                 $db->prepare("
                     UPDATE call_logs 
                     SET call_status = ?, 
                         end_time = CURRENT_TIMESTAMP,
-                        duration_seconds = 120
+                        duration_seconds = ?
                     WHERE id = ?
-                ")->execute([$finalStatus, $callLogId]);
+                ")->execute([$finalStatus, $duration, $callLogId]);
             }
 
             // Mark device as ONLINE again
@@ -262,6 +271,13 @@ class CallController extends Controller {
         $notes = trim($body['disposition_notes'] ?? '');
         $leadStatus = $body['lead_status'] ?? null;
         $nextFollowup = !empty($body['next_followup_date']) ? $body['next_followup_date'] : null;
+        $callDuration = (int)($body['call_duration'] ?? 0);
+
+        // Caller & Company Name updates
+        $fullName = trim($body['full_name'] ?? $body['customer_name'] ?? '');
+        $companyName = trim($body['company_name'] ?? '');
+        $city = trim($body['city'] ?? '');
+        $email = trim($body['email'] ?? '');
 
         if (!$callId) {
             $this->error('Call ID is required');
@@ -272,18 +288,32 @@ class CallController extends Controller {
         // Update call log
         $stmt = $db->prepare("
             UPDATE call_logs 
-            SET disposition = ?, disposition_notes = ?, next_followup_date = ?, call_status = 'COMPLETED'
+            SET disposition = ?, disposition_notes = ?, next_followup_date = ?, call_status = 'COMPLETED',
+                duration_seconds = CASE WHEN ? > 0 THEN ? ELSE duration_seconds END
             WHERE id = ?
         ");
-        $stmt->execute([$disposition, $notes, $nextFollowup, $callId]);
+        $stmt->execute([$disposition, $notes, $nextFollowup, $callDuration, $callDuration, $callId]);
 
         // Get customer ID
-        $callStmt = $db->prepare("SELECT customer_id FROM call_logs WHERE id = ?");
+        $callStmt = $db->prepare("SELECT customer_id, customer_number FROM call_logs WHERE id = ?");
         $callStmt->execute([$callId]);
         $call = $callStmt->fetch();
 
         if ($call && $call['customer_id']) {
-            $custId = $call['customer_id'];
+            $custId = (int)$call['customer_id'];
+
+            // Update customer name, company, city, and email immediately
+            if (!empty($fullName) || !empty($companyName) || !empty($city) || !empty($email)) {
+                $updateCust = $db->prepare("
+                    UPDATE customers 
+                    SET full_name = CASE WHEN ? != '' THEN ? ELSE full_name END,
+                        company_name = CASE WHEN ? != '' THEN ? ELSE company_name END,
+                        city = CASE WHEN ? != '' THEN ? ELSE city END,
+                        email = CASE WHEN ? != '' THEN ? ELSE email END
+                    WHERE id = ?
+                ");
+                $updateCust->execute([$fullName, $fullName, $companyName, $companyName, $city, $city, $email, $email, $custId]);
+            }
 
             // Insert into customer_notes
             if (!empty($notes)) {
@@ -304,7 +334,7 @@ class CallController extends Controller {
         $eventFile = __DIR__ . '/../../storage/active_event.json';
         file_put_contents($eventFile, json_encode(['event' => 'CLEARED', 'timestamp' => date('Y-m-d H:i:s')]));
 
-        $this->success('Call disposition and notes saved successfully');
+        $this->success('Call disposition and customer details saved successfully');
     }
 
     public function rejectCall(array $params): void {
@@ -399,7 +429,7 @@ class CallController extends Controller {
                    d.device_name, d.sim_number,
                    u.name as agent_name,
                    c.full_name as customer_name, c.company_name, c.city, c.lead_status,
-                   cr.file_path as recording_file_path, cr.duration_seconds as recording_duration
+                   cr.id as recording_id, cr.file_path as recording_file_path, cr.duration_seconds as recording_duration
             FROM call_logs cl
             LEFT JOIN devices d ON cl.device_id = d.id
             LEFT JOIN users u ON cl.user_id = u.id

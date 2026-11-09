@@ -193,11 +193,33 @@ export default function App() {
         const json = await res.json();
         const ev = json?.data?.event;
 
-        // Trigger whenever a new RINGING event arrives that hasn't been processed yet
-        if (ev && ev.id && ev.id !== lastProcessedEventIdRef.current && ev.event === 'RINGING') {
+        // Process whenever a new or updated event arrives
+        if (ev && ev.id && ev.id !== lastProcessedEventIdRef.current) {
           lastProcessedEventIdRef.current = ev.id;
-          playRingChime();
-          setActiveCallEvent(ev);
+
+          if (ev.event === 'RINGING') {
+            // 1. Incoming Call: Trigger popup and audio chime
+            playRingChime();
+            setActiveCallEvent(ev);
+          } else if (ev.event === 'ANSWERED' || ev.event === 'OFFHOOK') {
+            // 2. Call answered on mobile phone: Automatically transition screen to ANSWERED
+            setActiveCallEvent(prev => {
+              if (!prev) return { ...ev, event: 'ANSWERED' };
+              return { ...prev, event: 'ANSWERED' };
+            });
+          } else if (ev.event === 'ENDED' || ev.event === 'IDLE') {
+            // 3. Call disconnected / hung up on mobile phone: Automatically transition screen to ENDED
+            setActiveCallEvent(prev => {
+              if (!prev) return null;
+              return { ...prev, event: 'ENDED' };
+            });
+          } else if (ev.event === 'MISSED') {
+            // 4. Missed call event
+            setActiveCallEvent(prev => {
+              if (!prev) return null;
+              return { ...prev, event: 'ENDED', disposition: 'MISSED' };
+            });
+          }
         }
       } catch (err) {
         // network quiet catch
@@ -245,15 +267,19 @@ export default function App() {
     setActiveCallEvent(fullEvent);
   };
 
-  // Handle Save Disposition (Agent completed call and submitted outcome)
+  // Handle Save Disposition (Agent completed call and submitted outcome & caller info)
   const handleSaveDisposition = async (data) => {
     setActiveCallEvent(null);
     const duration = data.call_duration || 120;
+    const callerNum = activeCallEvent?.caller_number || data.customer_number || 'Unknown';
+    const customerName = data.full_name || activeCallEvent?.customer?.full_name || 'Caller';
+    const companyName = data.company_name || activeCallEvent?.customer?.company_name || '—';
+
     const newLog = {
       id: data.call_id || Date.now(),
-      customer_number: activeCallEvent?.caller_number,
-      customer_name: activeCallEvent?.customer?.full_name,
-      company_name: activeCallEvent?.customer?.company_name,
+      customer_number: callerNum,
+      customer_name: customerName,
+      company_name: companyName,
       call_type: 'INCOMING',
       call_status: 'COMPLETED',
       agent_name: currentUser?.name || 'Agent',
@@ -268,6 +294,34 @@ export default function App() {
 
     setCalls(prev => [newLog, ...prev]);
     setStats(prev => ({ ...prev, total_calls_today: prev.total_calls_today + 1, answered_today: prev.answered_today + 1 }));
+
+    // Update customer directory immediately
+    if (callerNum) {
+      setCustomers(prev => {
+        const existingIdx = prev.findIndex(c => c.phone_number === callerNum);
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          updated[existingIdx] = {
+            ...updated[existingIdx],
+            full_name: customerName,
+            company_name: companyName,
+            city: data.city || updated[existingIdx].city,
+            lead_status: data.lead_status || updated[existingIdx].lead_status
+          };
+          return updated;
+        } else {
+          return [{
+            id: Date.now(),
+            phone_number: callerNum,
+            full_name: customerName,
+            company_name: companyName,
+            city: data.city || '',
+            lead_status: data.lead_status || 'QUALIFIED',
+            tags: 'Inbound'
+          }, ...prev];
+        }
+      });
+    }
 
     try {
       if (data.call_id) {

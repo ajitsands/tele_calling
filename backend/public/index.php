@@ -64,6 +64,8 @@ $router->post('/api/customers', [CustomerController::class, 'store']);
 // Call Recordings
 $router->post('/api/recordings/upload', [RecordingController::class, 'upload']);
 $router->get('/api/recordings/{id}/stream', [RecordingController::class, 'stream']);
+$router->get('/api/recordings/call/{call_log_id}/stream', [RecordingController::class, 'streamByCallLog']);
+$router->get('/api/recordings/stream-file', [RecordingController::class, 'streamFile']);
 
 // Realtime SSE & Polling Event Stream
 $router->get('/api/realtime/latest', [EventStreamController::class, 'latest']);
